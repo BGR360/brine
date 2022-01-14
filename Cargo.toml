@@ -8,9 +8,11 @@ resolver = "2"
 members = [
     '.',
     './crates/brine_proto',
+    './crates/brine_proto_backend',
 ]
 
 [dependencies]
 bevy = { version = "0.6.0", features = ["dynamic"] }
 
 brine_proto = { path = "./crates/brine_proto" }
+brine_proto_backend = { path = "./crates/brine_proto_backend" }

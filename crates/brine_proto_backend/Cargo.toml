@@ -1,0 +1,10 @@
+[package]
+name = "brine_proto_backend"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.6.0"
+minecraft-protocol = { git = "https://github.com/eihwaz/minecraft-protocol" }
+
+brine_proto = { path = "../brine_proto" }
