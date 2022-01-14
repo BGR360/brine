@@ -785,6 +785,14 @@ name = "brine"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "brine_proto",
+]
+
+[[package]]
+name = "brine_proto"
+version = "0.0.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
