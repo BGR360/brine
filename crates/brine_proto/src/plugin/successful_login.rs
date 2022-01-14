@@ -42,10 +42,14 @@ fn handle_login(
     mut tx: EventWriter<ClientboundEvent>,
 ) {
     for event in rx.iter() {
-        if let ServerboundEvent::Login(_) = event {
+        if let ServerboundEvent::Login(login) = event {
             debug!("Dummy server advancing to state Play");
             state.set(ServerState::Play).unwrap();
-            tx.send(ClientboundEvent::LoginSuccess(LoginSuccess));
+
+            tx.send(ClientboundEvent::LoginSuccess(LoginSuccess {
+                uuid: uuid::Uuid::new_v4(),
+                username: login.username.clone(),
+            }));
             break;
         }
     }

@@ -793,6 +793,7 @@ name = "brine_proto"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "uuid",
 ]
 
 [[package]]

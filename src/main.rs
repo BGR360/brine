@@ -5,6 +5,9 @@ use bevy::{
     prelude::*,
 };
 
+const SERVER: &str = "foobar";
+const USERNAME: &str = "bgr360";
+
 fn main() {
     App::new()
         .insert_resource(LogSettings {
@@ -17,7 +20,7 @@ fn main() {
         .add_state(AppState::Login)
         .add_system_set(
             SystemSet::on_update(AppState::Login)
-                .with_system(send_handshake_and_login)
+                .with_system(initiate_login)
                 .with_system(advance_to_play),
         )
         .run();
@@ -30,13 +33,13 @@ enum AppState {
 }
 
 /// System that sends a handshake and login event when the space key is pressed.
-fn send_handshake_and_login(
-    mut tx: EventWriter<ServerboundEvent>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
+fn initiate_login(mut tx: EventWriter<ServerboundEvent>, keyboard_input: Res<Input<KeyCode>>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         info!("Initiating login");
-        tx.send(ServerboundEvent::Login(Login));
+        tx.send(ServerboundEvent::Login(Login {
+            server: SERVER.to_string(),
+            username: USERNAME.to_string(),
+        }));
     }
 }
 
