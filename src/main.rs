@@ -1,7 +1,4 @@
-use brine_proto::{
-    event::serverbound::{Handshake, LoginStart},
-    ClientboundEvent, ServerboundEvent,
-};
+use brine_proto::{event::serverbound::Login, ClientboundEvent, ServerboundEvent};
 
 use bevy::{
     log::{Level, LogSettings},
@@ -39,8 +36,7 @@ fn send_handshake_and_login(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         info!("Initiating login");
-        tx.send(ServerboundEvent::Handshake(Handshake));
-        tx.send(ServerboundEvent::LoginStart(LoginStart));
+        tx.send(ServerboundEvent::Login(Login));
     }
 }
 

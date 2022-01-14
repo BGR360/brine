@@ -2,8 +2,7 @@
 
 #[derive(Debug)]
 pub enum ServerboundEvent {
-    Handshake(serverbound::Handshake),
-    LoginStart(serverbound::LoginStart),
+    Login(serverbound::Login),
 }
 
 #[derive(Debug)]
@@ -13,10 +12,7 @@ pub enum ClientboundEvent {
 
 pub mod serverbound {
     #[derive(Debug)]
-    pub struct Handshake;
-
-    #[derive(Debug)]
-    pub struct LoginStart;
+    pub struct Login;
 }
 
 pub mod clientbound {

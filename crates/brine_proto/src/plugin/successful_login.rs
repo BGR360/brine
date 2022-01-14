@@ -1,6 +1,6 @@
 use crate::event::{clientbound::LoginSuccess, ClientboundEvent, ServerboundEvent};
 
-use bevy::{ecs::schedule::StateError, prelude::*};
+use bevy::prelude::*;
 
 /// A plugin that responds immediately with success to the first login request.
 ///
@@ -10,8 +10,7 @@ use bevy::{ecs::schedule::StateError, prelude::*};
 ///
 /// The plugin acts on the following events:
 ///
-/// * [`ServerboundEvent::Handshake`]
-/// * [`ServerboundEvent::LoginStart`]
+/// * [`ServerboundEvent::Login`]
 ///
 /// The plugin sends the following events:
 ///
@@ -26,50 +25,28 @@ pub struct AlwaysSuccessfulLoginPlugin;
 
 impl Plugin for AlwaysSuccessfulLoginPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state(ServerState::Handshake);
-        app.add_system_set(
-            SystemSet::on_update(ServerState::Handshake).with_system(handle_handshake),
-        );
-        app.add_system_set(
-            SystemSet::on_update(ServerState::Login).with_system(handle_login_start),
-        );
+        app.add_state(ServerState::Login);
+        app.add_system_set(SystemSet::on_update(ServerState::Login).with_system(handle_login));
     }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum ServerState {
-    Handshake,
     Login,
     Play,
 }
 
-fn handle_handshake(mut state: ResMut<State<ServerState>>, mut rx: EventReader<ServerboundEvent>) {
-    for event in rx.iter() {
-        if let ServerboundEvent::Handshake(_) = event {
-            advance(&mut state, ServerState::Login).unwrap();
-            break;
-        }
-    }
-}
-
-fn handle_login_start(
+fn handle_login(
     mut state: ResMut<State<ServerState>>,
     mut rx: EventReader<ServerboundEvent>,
     mut tx: EventWriter<ClientboundEvent>,
 ) {
     for event in rx.iter() {
-        if let ServerboundEvent::LoginStart(_) = event {
-            advance(&mut state, ServerState::Play).unwrap();
+        if let ServerboundEvent::Login(_) = event {
+            debug!("Dummy server advancing to state Play");
+            state.set(ServerState::Play).unwrap();
             tx.send(ClientboundEvent::LoginSuccess(LoginSuccess));
             break;
         }
     }
-}
-
-fn advance(
-    state: &mut ResMut<State<ServerState>>,
-    new_state: ServerState,
-) -> Result<(), StateError> {
-    debug!("Dummy server advancing to state {:?}", new_state);
-    state.set(new_state)
 }
