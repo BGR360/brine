@@ -59,7 +59,7 @@ fn connect_to_server(
 ) {
     for event in rx.iter() {
         match event {
-            ServerboundEvent::Login(login) => {
+            ServerboundEvent::Login(_) => {
                 info!("Connecting to server");
                 commands.insert_resource(Connection);
                 connection_state.set(ConnectionState::Connecting).unwrap();
@@ -78,10 +78,10 @@ fn on_connection_established(mut connection_state: ResMut<State<ConnectionState>
     connection_state.set(ConnectionState::Connected).unwrap();
 }
 
-fn send_serverbound_packets(mut rx: EventReader<ServerboundEvent>, mut tx: ResMut<Connection>) {
+fn send_serverbound_packets(mut rx: EventReader<ServerboundEvent>, _tx: ResMut<Connection>) {
     for event in rx.iter() {
         match event {
-            ServerboundEvent::Login(login) => {}
+            ServerboundEvent::Login(_) => {}
         }
     }
 }

@@ -1,0 +1,11 @@
+[package]
+name = "brine_net"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+async-codec = "0.4"
+async-net = "1.6"
+bevy = "0.6.0"
+crossbeam-channel = "0.5"
+thiserror = "1"

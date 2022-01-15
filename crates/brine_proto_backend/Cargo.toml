@@ -7,4 +7,5 @@ edition = "2021"
 bevy = "0.6.0"
 minecraft-protocol = { git = "https://github.com/eihwaz/minecraft-protocol" }
 
+brine_net = { path = "../brine_net" }
 brine_proto = { path = "../brine_proto" }
