@@ -16,6 +16,8 @@ mod event;
 mod plugin;
 mod resource;
 
+pub mod codec;
+
 pub use event::NetworkEvent;
 pub use plugin::NetworkPlugin;
 pub use resource::NetworkResource;
