@@ -6,7 +6,9 @@ use bevy::{
 };
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
-use brine_net::{codec::StringCodec, NetworkEvent, NetworkPlugin, NetworkResource};
+use brine_net::{
+    codec::StringCodec, CodecReader, CodecWriter, NetworkEvent, NetworkPlugin, NetworkResource,
+};
 
 const SERVER: &str = "127.0.0.1:7779";
 
@@ -18,7 +20,7 @@ fn main() {
     App::new()
         .add_plugins(MinimalPlugins)
         .insert_resource(LogSettings {
-            level: Level::DEBUG,
+            level: Level::TRACE,
             ..Default::default()
         })
         .add_plugin(LogPlugin)
@@ -63,21 +65,21 @@ fn connect(mut net_resource: ResMut<NetworkResource<StringCodec>>) {
 }
 
 fn read_net_events(
-    mut reader: EventReader<NetworkEvent<StringCodec>>,
-    net_resource: Res<NetworkResource<StringCodec>>,
+    mut event_reader: EventReader<NetworkEvent<StringCodec>>,
+    mut codec_writer: CodecWriter<StringCodec>,
 ) {
-    for event in reader.iter() {
+    for event in event_reader.iter() {
         println!("NetworkEvent: {:?}", &event);
 
         if let NetworkEvent::Connected = event {
             let packet = String::from("hello world");
-            net_resource.send_packet(packet);
+            codec_writer.send(packet);
         }
     }
 }
 
-fn read_packets(net_resource: Res<NetworkResource<StringCodec>>) {
-    if let Some(packet) = net_resource.try_recv_packet() {
+fn read_packets(mut codec_reader: CodecReader<StringCodec>) {
+    for packet in codec_reader.iter() {
         println!("Packet received by client: {}", packet);
     }
 }
