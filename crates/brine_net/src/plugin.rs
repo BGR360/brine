@@ -1,7 +1,6 @@
 //! Plugins exposed by this crate.
 
-use std::any::Any;
-use std::marker::PhantomData;
+use std::{any::Any, fmt::Debug, marker::PhantomData};
 
 use async_codec::{Decode, Encode};
 use bevy::{
@@ -27,7 +26,11 @@ impl<Codec> Default for NetworkPlugin<Codec> {
 
 impl<Codec> Plugin for NetworkPlugin<Codec>
 where
-    Codec: Decode + Encode + Any + Send + Sync,
+    Codec: Decode + Encode + Default + Unpin + Any + Send + Sync,
+    <Codec as Decode>::Item: Debug + Send,
+    <Codec as Encode>::Item: Debug + Send,
+    <Codec as Decode>::Error: Debug + Send,
+    <Codec as Encode>::Error: Debug + Send,
 {
     fn build(&self, app: &mut App) {
         app.add_event::<NetworkEvent<Codec>>();
@@ -44,7 +47,9 @@ fn send_network_events<Codec>(
     mut net_resource: ResMut<NetworkResource<Codec>>,
     event_writer: EventWriter<NetworkEvent<Codec>>,
 ) where
-    Codec: Any + Send + Sync,
+    Codec: Decode + Encode + Any + Send + Sync,
+    <Codec as Decode>::Item: Send,
+    <Codec as Encode>::Item: Send,
 {
     net_resource.send_network_events(event_writer);
 }

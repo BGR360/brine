@@ -20,4 +20,7 @@ pub enum NetworkError {
 
     #[error("failed to connect to server")]
     ConnectFailed(io::Error),
+
+    #[error("an error occurred during transport")]
+    TransportError(io::Error),
 }
