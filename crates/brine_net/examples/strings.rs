@@ -64,7 +64,7 @@ fn connect(mut net_resource: ResMut<NetworkResource<StringCodec>>) {
 
 fn read_net_events(
     mut reader: EventReader<NetworkEvent<StringCodec>>,
-    mut net_resource: ResMut<NetworkResource<StringCodec>>,
+    net_resource: Res<NetworkResource<StringCodec>>,
 ) {
     for event in reader.iter() {
         println!("NetworkEvent: {:?}", &event);
@@ -76,7 +76,7 @@ fn read_net_events(
     }
 }
 
-fn read_packets(mut net_resource: ResMut<NetworkResource<StringCodec>>) {
+fn read_packets(net_resource: Res<NetworkResource<StringCodec>>) {
     if let Some(packet) = net_resource.try_recv_packet() {
         println!("Packet received by client: {}", packet);
     }

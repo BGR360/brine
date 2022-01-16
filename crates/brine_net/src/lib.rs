@@ -12,6 +12,7 @@
 //! implements [`async_codec::Encode`] and [`async_codec::Decode`]. The
 //! [`async_codec` docs][`async_codec`] provide a good example of this.
 
+mod connection;
 mod event;
 mod plugin;
 mod resource;
