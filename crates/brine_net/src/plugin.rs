@@ -83,8 +83,8 @@ where
     Codec: Decode + Encode + Default + Clone + Unpin + Any + Send + Sync,
     <Codec as Decode>::Item: Debug + Send + Sync,
     <Codec as Encode>::Item: Debug + Send + Sync,
-    <Codec as Decode>::Error: Debug + Send,
-    <Codec as Encode>::Error: Debug + Send,
+    <Codec as Decode>::Error: Debug + Send + Sync,
+    <Codec as Encode>::Error: Debug + Send + Sync,
 {
     fn build(&self, app: &mut App) {
         app.add_event::<NetworkEvent<Codec>>();
@@ -109,6 +109,8 @@ where
     Codec: Decode + Encode + Any + Send + Sync,
     <Codec as Decode>::Item: Send + Sync,
     <Codec as Encode>::Item: Send + Sync,
+    <Codec as Decode>::Error: Debug + Send + Sync,
+    <Codec as Encode>::Error: Debug + Send + Sync,
 {
     /// System that pulls [`NetworkEvent`]s from the internal channel and
     /// forwards them through an [`EventWriter`] so they can be read by the

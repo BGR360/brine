@@ -13,7 +13,11 @@ use crate::{
 
 /// Resource that provides a TCP connection that encodes and decodes
 /// packets as specified by the given codec.
-pub struct NetworkResource<Codec: Decode + Encode> {
+pub struct NetworkResource<Codec: Decode + Encode>
+where
+    <Codec as Decode>::Error: Debug,
+    <Codec as Encode>::Error: Debug,
+{
     pub(crate) task_pool: TaskPool,
     pub(crate) connection_task: Option<Task<()>>,
 

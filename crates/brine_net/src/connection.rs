@@ -9,7 +9,11 @@ use futures::{FutureExt, SinkExt, StreamExt};
 use crate::{event::NetworkError, resource::NetworkResource, NetworkEvent};
 
 /// Internal utility struct responsible for running
-pub(crate) struct Connection<Codec: Decode + Encode> {
+pub(crate) struct Connection<Codec: Decode + Encode>
+where
+    <Codec as Decode>::Error: Debug,
+    <Codec as Encode>::Error: Debug,
+{
     network_event_sender: Sender<NetworkEvent<Codec>>,
     peerbound_packet_receiver: Receiver<<Codec as Encode>::Item>,
     selfbound_packet_sender: Sender<<Codec as Decode>::Item>,
@@ -35,7 +39,7 @@ where
         self.network_event_sender.send(event).await.unwrap();
     }
 
-    async fn send_error(&self, error: NetworkError) {
+    async fn send_error(&self, error: NetworkError<Codec>) {
         self.send_event(NetworkEvent::Error(error)).await;
     }
 
@@ -93,7 +97,9 @@ where
                 Err(WriteFrameError::Io(err)) => {
                     self.send_error(NetworkError::TransportError(err)).await;
                 }
-                Err(err) => log::error!("Codec error: {:?}", err),
+                Err(WriteFrameError::Encode(err)) => {
+                    self.send_error(NetworkError::EncodeError(err)).await;
+                }
             }
         }
     }
@@ -116,7 +122,9 @@ where
                     Err(ReadFrameError::Io(err)) => {
                         self.send_error(NetworkError::TransportError(err)).await
                     }
-                    Err(err) => log::error!("Codec error: {:?}", err),
+                    Err(ReadFrameError::Decode(err)) => {
+                        self.send_error(NetworkError::DecodeError(err)).await;
+                    }
                 }
             } else {
                 log::info!("Remote host terminated the connection.");
