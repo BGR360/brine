@@ -8,16 +8,19 @@
 //! is a little more high-level, and the "back-end" is concerned with speaking
 //! the actual protocol and converting to and from this higher-level API.
 
+pub use uuid::Uuid;
+
 /// Events sent from the client to the server.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ServerboundEvent {
     Login(serverbound::Login),
 }
 
 /// Events received by the client from the server.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ClientboundEvent {
     LoginSuccess(clientbound::LoginSuccess),
+    LoginFailure(clientbound::LoginFailure),
 }
 
 pub mod serverbound {
@@ -33,7 +36,7 @@ pub mod serverbound {
     /// # See also
     ///
     /// * [`clientbound::LoginSuccess`]
-    #[derive(Debug)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct Login {
         /// Hostname or IP address of the server.
         pub server: String,
@@ -54,12 +57,23 @@ pub mod clientbound {
     /// # See also
     ///
     /// * [`serverbound::Login`]
-    #[derive(Debug)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct LoginSuccess {
         /// UUID assigned by the server to this client.
         pub uuid: uuid::Uuid,
 
         /// Username that was used to join the game.
         pub username: String,
+    }
+
+    /// Notifies the client that they failed to log in to the server.
+    ///
+    /// # See also
+    ///
+    /// * [`serverbound::Login`]
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct LoginFailure {
+        /// Human-readable reason for why the login failed.
+        pub reason: String,
     }
 }

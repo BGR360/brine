@@ -5,19 +5,18 @@ use bevy::{
     prelude::*,
 };
 
-const SERVER: &str = "foobar";
+const SERVER: &str = "localhost:25565";
 const USERNAME: &str = "bgr360";
 
 fn main() {
     App::new()
         .insert_resource(LogSettings {
-            level: Level::INFO,
+            level: Level::DEBUG,
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(brine_proto::ProtocolPlugin)
         .add_plugin(brine_proto_backend::ProtocolBackendPlugin)
-        //.add_plugin(brine_proto::AlwaysSuccessfulLoginPlugin)
         .add_startup_system(initiate_login)
         .add_state(AppState::Login)
         .add_system_set(SystemSet::on_update(AppState::Login).with_system(advance_to_play))

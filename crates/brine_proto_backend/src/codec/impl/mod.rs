@@ -61,6 +61,7 @@ mod test {
 
         let protocol_state = match expected {
             ClientboundPacket::Login(_) => MinecraftProtocolState::Login,
+            ClientboundPacket::Play(_) => MinecraftProtocolState::Play,
             ClientboundPacket::Unknown(_) => panic!("not allowed"),
         };
         let codec = MinecraftClientCodec::new(protocol_state);

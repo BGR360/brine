@@ -2,13 +2,13 @@
 
 use bevy::prelude::*;
 
-use brine_net::{CodecReader, CodecWriter, NetworkResource};
+use brine_net::{CodecReader, CodecWriter, NetworkEvent, NetworkPlugin};
 use brine_proto::{ClientboundEvent, ServerboundEvent};
 
 use crate::codec::MinecraftClientCodec;
 use crate::convert::{ToEvent, ToPacket};
 
-type ProtocolCodec = MinecraftClientCodec;
+pub(crate) type ProtocolCodec = MinecraftClientCodec;
 
 /// Minecraft protocol implementation plugin.
 ///
@@ -33,18 +33,11 @@ pub struct ProtocolBackendPlugin;
 
 impl Plugin for ProtocolBackendPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state(ConnectionState::NotConnected);
-        app.add_system_set(
-            SystemSet::on_update(ConnectionState::NotConnected).with_system(connect_to_server),
-        );
-        app.add_system_set(
-            SystemSet::on_enter(ConnectionState::Connecting).with_system(on_connection_established),
-        );
-        app.add_system_set(
-            SystemSet::on_update(ConnectionState::Connected)
-                .with_system(process_serverbound_packets)
-                .with_system(process_clientbound_packets),
-        );
+        app.add_plugin(NetworkPlugin::<ProtocolCodec>::default());
+
+        app.add_system(log_network_errors);
+
+        Self::build_login(app);
     }
 }
 
@@ -55,30 +48,12 @@ enum ConnectionState {
     Connected,
 }
 
-fn connect_to_server(
-    mut event_reader: EventReader<ServerboundEvent>,
-    mut connection_state: ResMut<State<ConnectionState>>,
-    mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
-) {
+fn log_network_errors(mut event_reader: EventReader<NetworkEvent<ProtocolCodec>>) {
     for event in event_reader.iter() {
-        match event {
-            ServerboundEvent::Login(login) => {
-                info!("Connecting to server");
-                net_resource.connect(login.server.clone());
-                connection_state.set(ConnectionState::Connecting).unwrap();
-                break;
-            }
-            _ => {
-                warn!("Unexpected serverbound event when no connection exists.");
-                debug!("{:#?}", event);
-            }
+        if let NetworkEvent::Error(network_error) = event {
+            warn!("Network error: {}", network_error);
         }
     }
-}
-
-fn on_connection_established(mut connection_state: ResMut<State<ConnectionState>>) {
-    info!("Connection established.");
-    connection_state.set(ConnectionState::Connected).unwrap();
 }
 
 fn process_serverbound_packets(

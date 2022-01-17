@@ -12,10 +12,21 @@ use crate::codec::{
 };
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum ClientboundPacket {
     Login(proto::login::LoginClientBoundPacket),
+    Play(proto::game::GameClientBoundPacket),
     Unknown(UnknownPacket),
+}
+
+impl PartialEq for ClientboundPacket {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Login(l0), Self::Login(r0)) => l0 == r0,
+            (Self::Unknown(l0), Self::Unknown(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
 }
 
 impl ClientboundPacket {
@@ -23,6 +34,7 @@ impl ClientboundPacket {
     pub fn get_type_id(&self) -> u8 {
         match self {
             Self::Login(p) => p.get_type_id(),
+            Self::Play(p) => p.get_type_id(),
             Self::Unknown(p) => p.packet_id,
         }
     }
@@ -131,6 +143,9 @@ impl MinecraftCodec {
             MinecraftProtocolState::Login => ClientboundPacket::Login(
                 proto::login::LoginClientBoundPacket::decode(packet_id, buf)?,
             ),
+            MinecraftProtocolState::Play => {
+                ClientboundPacket::Play(proto::game::GameClientBoundPacket::decode(packet_id, buf)?)
+            }
             _ => return Err(DecodeError::UnknownPacketType { type_id: 0 }),
         };
 
