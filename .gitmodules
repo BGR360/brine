@@ -1,0 +1,4 @@
+[submodule "crates/minecraft-protocol"]
+	path = crates/minecraft-protocol
+	url = https://github.com/BGR360/minecraft-protocol.git
+	branch = my-fork
