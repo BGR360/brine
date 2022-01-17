@@ -25,7 +25,9 @@ impl MinecraftCodec {
     }
 }
 
-impl Decode for MinecraftClientCodec {
+pub type ProtocolCodec = MinecraftClientCodec<MinecraftCodec>;
+
+impl Decode for MinecraftClientCodec<MinecraftCodec> {
     type Item = ClientboundPacket;
     type Error = DecodeError;
 
@@ -47,7 +49,7 @@ impl Decode for MinecraftClientCodec {
     }
 }
 
-impl Encode for MinecraftClientCodec {
+impl Encode for MinecraftClientCodec<MinecraftCodec> {
     type Item = ServerboundPacket;
     type Error = EncodeError;
 

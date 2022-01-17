@@ -3,6 +3,8 @@
 mod codec;
 mod plugin;
 
-mod r#impl;
+mod backend_minecraft_protocol;
+
+pub(crate) use backend_minecraft_protocol as backend;
 
 pub use plugin::ProtocolBackendPlugin;

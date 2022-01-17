@@ -16,10 +16,11 @@ use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkRes
 use brine_proto::{event, ClientboundEvent, ServerboundEvent};
 use minecraft_protocol::data::chat;
 
-use crate::{
-    codec::{proto, ClientboundPacket, ServerboundPacket},
-    plugin::ProtocolCodec,
-};
+use crate::codec::MinecraftClientCodec;
+
+use super::codec::{proto, ClientboundPacket, MinecraftCodec, ServerboundPacket};
+
+type ProtocolCodec = MinecraftClientCodec<MinecraftCodec>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum LoginState {

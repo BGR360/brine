@@ -1,6 +1,6 @@
 use brine_proto::{ClientboundEvent, ServerboundEvent};
 
-use crate::codec::{ClientboundPacket, ServerboundPacket};
+use super::codec::{ClientboundPacket, ServerboundPacket};
 
 pub trait ToPacket<T> {
     fn to_packet(&self) -> Option<T>;

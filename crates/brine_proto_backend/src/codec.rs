@@ -1,14 +1,14 @@
-//! Defining the `brine_net` codec for the Minecraft protocol.
+//! Backend-independent definitions for the Minecraft protocol codec.
 
-use std::sync::{
-    atomic::{AtomicU8, Ordering},
-    Arc,
+use std::{
+    marker::PhantomData,
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
 };
 
 use brine_net::{DecodeResult, EncodeResult};
-
-pub(crate) use crate::r#impl::codec::proto;
-pub use crate::r#impl::codec::{ClientboundPacket, DecodeError, EncodeError, ServerboundPacket};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MinecraftProtocolState {
@@ -69,19 +69,39 @@ impl CodecState {
     }
 }
 
-#[derive(Default, Clone)]
-pub struct MinecraftClientCodec {
+pub struct MinecraftClientCodec<Backend> {
     /// See note in [`brine_net`] docs to see why this needs to be an Arc.
     pub(crate) state: Arc<CodecState>,
+
+    _phantom: PhantomData<Backend>,
 }
 
-impl MinecraftClientCodec {
+impl<Backend> Default for MinecraftClientCodec<Backend> {
+    fn default() -> Self {
+        Self {
+            state: Default::default(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<Backend> Clone for MinecraftClientCodec<Backend> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<Backend> MinecraftClientCodec<Backend> {
     #[cfg(test)]
     pub(crate) fn new(state: MinecraftProtocolState) -> Self {
         let codec_state = CodecState::default();
         codec_state.set_state(state);
         Self {
             state: Arc::new(codec_state),
+            _phantom: PhantomData,
         }
     }
 }

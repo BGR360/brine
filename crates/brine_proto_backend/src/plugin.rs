@@ -4,9 +4,7 @@ use bevy::prelude::*;
 
 use brine_net::{NetworkEvent, NetworkPlugin};
 
-use crate::codec::MinecraftClientCodec;
-
-pub(crate) type ProtocolCodec = MinecraftClientCodec;
+use crate::backend::{self, ProtocolCodec};
 
 /// Minecraft protocol implementation plugin.
 ///
@@ -35,7 +33,7 @@ impl Plugin for ProtocolBackendPlugin {
 
         app.add_system(log_network_errors);
 
-        crate::r#impl::login::build(app);
+        backend::build(app);
     }
 }
 
