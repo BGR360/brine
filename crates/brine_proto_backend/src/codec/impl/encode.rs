@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    io::{self, Cursor, Write},
-};
+use std::io::{self, Cursor, Write};
 
 use minecraft_protocol::encoder::{Encoder, EncoderWriteExt};
 pub use minecraft_protocol::error::EncodeError;
@@ -19,6 +16,7 @@ pub enum ServerboundPacket {
 }
 
 impl ServerboundPacket {
+    #[cfg(test)]
     pub fn get_type_id(&self) -> u8 {
         match self {
             Self::Handshake(p) => p.get_type_id(),

@@ -19,6 +19,7 @@ pub enum ClientboundPacket {
 }
 
 impl ClientboundPacket {
+    #[cfg(test)]
     pub fn get_type_id(&self) -> u8 {
         match self {
             Self::Login(p) => p.get_type_id(),
