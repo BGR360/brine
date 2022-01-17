@@ -19,7 +19,6 @@ use minecraft_protocol::data::chat;
 use crate::{
     codec::{proto, ClientboundPacket, ServerboundPacket},
     plugin::ProtocolCodec,
-    ProtocolBackendPlugin,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -31,27 +30,22 @@ enum LoginState {
 }
 
 struct LoginResource {
-    server: String,
     username: String,
 }
 
-impl ProtocolBackendPlugin {
-    pub(crate) fn build_login(app: &mut App) {
-        app.add_state(LoginState::NotStarted);
+pub(crate) fn build(app: &mut App) {
+    app.add_state(LoginState::NotStarted);
 
-        app.add_system_set(
-            SystemSet::on_update(LoginState::NotStarted).with_system(connect_to_server),
-        );
-        app.add_system_set(
-            SystemSet::on_update(LoginState::Connecting)
-                .with_system(handle_connection_error)
-                .with_system(send_handshake_and_login_start),
-        );
-        app.add_system_set(
-            SystemSet::on_update(LoginState::HandshakeAndLoginStartSent)
-                .with_system(await_login_success),
-        );
-    }
+    app.add_system_set(SystemSet::on_update(LoginState::NotStarted).with_system(connect_to_server));
+    app.add_system_set(
+        SystemSet::on_update(LoginState::Connecting)
+            .with_system(handle_connection_error)
+            .with_system(send_handshake_and_login_start),
+    );
+    app.add_system_set(
+        SystemSet::on_update(LoginState::HandshakeAndLoginStartSent)
+            .with_system(await_login_success),
+    );
 }
 
 /// System that listents for a Login event and intiates a connection to the server.
@@ -68,7 +62,6 @@ fn connect_to_server(
                 net_resource.connect(login.server.clone());
 
                 commands.insert_resource(LoginResource {
-                    server: login.server.clone(),
                     username: login.username.clone(),
                 });
 

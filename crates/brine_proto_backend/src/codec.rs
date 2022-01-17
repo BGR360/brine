@@ -9,11 +9,9 @@ use bevy::log;
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
-mod r#impl;
-
-pub(crate) use r#impl::proto;
-use r#impl::MinecraftCodec;
-pub use r#impl::{ClientboundPacket, DecodeError, EncodeError, ServerboundPacket};
+pub(crate) use crate::r#impl::codec::proto;
+use crate::r#impl::codec::MinecraftCodec;
+pub use crate::r#impl::codec::{ClientboundPacket, DecodeError, EncodeError, ServerboundPacket};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MinecraftProtocolState {

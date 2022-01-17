@@ -6,10 +6,9 @@ use std::{
 use minecraft_protocol::decoder::DecoderReadExt;
 pub use minecraft_protocol::error::DecodeError;
 
-use crate::codec::{
-    r#impl::{proto, MinecraftCodec},
-    IntoDecodeResult, MinecraftProtocolState,
-};
+use crate::codec::{IntoDecodeResult, MinecraftProtocolState};
+
+use super::{proto, MinecraftCodec};
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]

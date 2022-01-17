@@ -3,10 +3,9 @@ use std::io::{self, Cursor, Write};
 use minecraft_protocol::encoder::{Encoder, EncoderWriteExt};
 pub use minecraft_protocol::error::EncodeError;
 
-use crate::codec::{
-    r#impl::{proto, MinecraftCodec},
-    IntoEncodeResult,
-};
+use crate::codec::IntoEncodeResult;
+
+use super::{proto, MinecraftCodec};
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq)]
