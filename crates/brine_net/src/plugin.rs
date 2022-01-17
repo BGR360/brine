@@ -80,7 +80,7 @@ type CodecWriteEvent<Codec> = Write<<Codec as Encode>::Item, Codec>;
 
 impl<Codec> Plugin for NetworkPlugin<Codec>
 where
-    Codec: Decode + Encode + Default + Unpin + Any + Send + Sync,
+    Codec: Decode + Encode + Default + Clone + Unpin + Any + Send + Sync,
     <Codec as Decode>::Item: Debug + Send + Sync,
     <Codec as Encode>::Item: Debug + Send + Sync,
     <Codec as Decode>::Error: Debug + Send,

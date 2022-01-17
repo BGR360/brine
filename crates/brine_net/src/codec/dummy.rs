@@ -1,7 +1,7 @@
 use async_codec::{Decode, DecodeResult, Encode, EncodeResult};
 
 /// A dummy codec useful for testing.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct DummyCodec;
 
 impl Encode for DummyCodec {

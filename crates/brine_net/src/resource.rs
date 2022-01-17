@@ -42,7 +42,7 @@ pub struct NetworkResource<Codec: Decode + Encode> {
 
 impl<Codec> NetworkResource<Codec>
 where
-    Codec: Decode + Encode + Default + Unpin + Send + 'static,
+    Codec: Decode + Encode + Default + Clone + Unpin + Send + 'static,
     <Codec as Decode>::Item: Debug + Send + 'static,
     <Codec as Encode>::Item: Debug + Send + 'static,
     <Codec as Decode>::Error: Debug + Send + 'static,

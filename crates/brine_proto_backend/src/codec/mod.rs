@@ -26,6 +26,7 @@ pub(crate) trait IntoEncodeResult {
     fn into_encode_result(self) -> EncodeResult<Self::Error>;
 }
 
+#[derive(Clone)]
 struct CodecState {
     state: MinecraftProtocolState,
 }
@@ -48,7 +49,7 @@ impl CodecState {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MinecraftClientCodec {
     state: CodecState,
 }

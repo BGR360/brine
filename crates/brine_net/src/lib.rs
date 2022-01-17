@@ -9,10 +9,32 @@
 //!
 //! Using this crate starts with defining your **codec**, or how your protocol
 //! is encoded and decoded through the network. Do this by defining a type that
-//! implements [`async_codec::Encode`] and [`async_codec::Decode`]. The
+//! implements [`Encode`] and [`Decode`]. The
 //! [`async_codec` docs][`async_codec`] provide a good example of this.
 //!
+//! ## Important note on codecs
+//!
+//! In addition to [`Encode`] and [`Decode`], codec types must implement
+//! [`Default`] and [`Clone`]. **The [`Clone`] implementation cannot just be a
+//! trivial clone; it must ensure that changes to one clone propagate to changes
+//! in all others, and it must do so without any blocking operations.** So, in
+//! other words, use [`Arc`][std::sync::Arc]s and atomic primitives.
+//!
+//! This is because of a quirk in how this crate uses the codec object. What it
+//! does is construct the codec using [`Default`] when the connection is
+//! established, and then clones it to create two copies, each of which is
+//! passed to the two background tasks that read and write from the socket. If
+//! your codec changes its internal state in response to certain data being read
+//! or written, then these changes need to propagate.
+//!
+//! The reason no blocking operations are allowed is because the background task
+//! uses futures / async-await.
+//!
 //! # Example
+//!
+//! The example below shows how you might use the network plugin with a dummy
+//! codec. See the [`NetworkPlugin`] documentation for more details on how to
+//! interact with the plugin.
 //!
 //! ```no_run
 //! use bevy::prelude::*;
