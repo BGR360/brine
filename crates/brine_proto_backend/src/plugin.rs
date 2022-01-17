@@ -1,11 +1,16 @@
 //! Plugins exported by this crate.
 
 use bevy::prelude::*;
-//use minecraft_protocol::version::v1_14_4 as minecraft_proto;
 
+use brine_net::{CodecReader, CodecWriter, NetworkResource};
 use brine_proto::{ClientboundEvent, ServerboundEvent};
 
-/// A plugin that responds immediately with success to the first login request.
+use crate::codec::MinecraftClientCodec;
+use crate::convert::{ToEvent, ToPacket};
+
+type ProtocolCodec = MinecraftClientCodec;
+
+/// Minecraft protocol implementation plugin.
 ///
 /// # Events
 ///
@@ -37,13 +42,11 @@ impl Plugin for ProtocolBackendPlugin {
         );
         app.add_system_set(
             SystemSet::on_update(ConnectionState::Connected)
-                .with_system(send_serverbound_packets)
-                .with_system(recv_clientbound_packets),
+                .with_system(process_serverbound_packets)
+                .with_system(process_clientbound_packets),
         );
     }
 }
-
-struct Connection;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum ConnectionState {
@@ -53,15 +56,15 @@ enum ConnectionState {
 }
 
 fn connect_to_server(
-    mut rx: EventReader<ServerboundEvent>,
+    mut event_reader: EventReader<ServerboundEvent>,
     mut connection_state: ResMut<State<ConnectionState>>,
-    mut commands: Commands,
+    mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
 ) {
-    for event in rx.iter() {
+    for event in event_reader.iter() {
         match event {
-            ServerboundEvent::Login(_) => {
+            ServerboundEvent::Login(login) => {
                 info!("Connecting to server");
-                commands.insert_resource(Connection);
+                net_resource.connect(login.server.clone());
                 connection_state.set(ConnectionState::Connecting).unwrap();
                 break;
             }
@@ -78,12 +81,32 @@ fn on_connection_established(mut connection_state: ResMut<State<ConnectionState>
     connection_state.set(ConnectionState::Connected).unwrap();
 }
 
-fn send_serverbound_packets(mut rx: EventReader<ServerboundEvent>, _tx: ResMut<Connection>) {
-    for event in rx.iter() {
+fn process_serverbound_packets(
+    mut event_reader: EventReader<ServerboundEvent>,
+    mut packet_writer: CodecWriter<ProtocolCodec>,
+) {
+    for event in event_reader.iter() {
         match event {
-            ServerboundEvent::Login(_) => {}
+            ServerboundEvent::Login(login) => {
+                warn!("Unexpected login event when connection already established.");
+                debug!("{:#?}", login);
+            }
+            _ => {}
+        }
+
+        if let Some(packet) = event.to_packet() {
+            packet_writer.send(packet);
         }
     }
 }
 
-fn recv_clientbound_packets(mut _rx: ResMut<Connection>, mut _tx: EventWriter<ClientboundEvent>) {}
+fn process_clientbound_packets(
+    mut packet_reader: CodecReader<ProtocolCodec>,
+    mut event_writer: EventWriter<ClientboundEvent>,
+) {
+    for packet in packet_reader.iter() {
+        if let Some(event) = packet.to_event() {
+            event_writer.send(event);
+        }
+    }
+}
