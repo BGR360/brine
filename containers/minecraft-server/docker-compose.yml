@@ -18,4 +18,4 @@ services:
     restart: unless-stopped
     volumes:
       # attach a directory relative to the directory containing this compose file
-      - ./minecraft-data:/data
+      - ./data:/data
