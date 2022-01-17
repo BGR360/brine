@@ -1,4 +1,10 @@
-use crate::codec::MinecraftProtocolState;
+use bevy::log;
+
+use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
+
+use crate::codec::{
+    IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState,
+};
 
 mod decode;
 mod encode;
@@ -16,6 +22,39 @@ pub struct MinecraftCodec {
 impl MinecraftCodec {
     pub(crate) fn new(state: MinecraftProtocolState) -> Self {
         Self { state }
+    }
+}
+
+impl Decode for MinecraftClientCodec {
+    type Item = ClientboundPacket;
+    type Error = DecodeError;
+
+    fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Self::Item, Self::Error>) {
+        let result =
+            MinecraftCodec::new(self.state.state()).decode_clientbound_packet(buf as &[u8]);
+
+        // Advance to state Play if the packet we just decoded was LoginSuccess.
+        if let Ok((
+            _,
+            ClientboundPacket::Login(proto::login::LoginClientBoundPacket::LoginSuccess(_)),
+        )) = result
+        {
+            log::debug!("Codec advancing to state Play");
+            self.state.set_state(MinecraftProtocolState::Play);
+        }
+
+        result.into_decode_result()
+    }
+}
+
+impl Encode for MinecraftClientCodec {
+    type Item = ServerboundPacket;
+    type Error = EncodeError;
+
+    fn encode(&mut self, item: &Self::Item, buf: &mut [u8]) -> EncodeResult<Self::Error> {
+        MinecraftCodec::new(self.state.state())
+            .encode_serverbound_packet(item, buf)
+            .into_encode_result()
     }
 }
 
