@@ -93,6 +93,8 @@ mod system_param;
 
 pub mod codec;
 
+pub use async_codec::{Decode, DecodeResult, Encode, EncodeResult};
+
 pub use event::NetworkEvent;
 pub use plugin::{CodecReader, CodecWriter, NetworkPlugin};
 pub use resource::NetworkResource;
