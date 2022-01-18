@@ -2,5 +2,10 @@
 //! the backend.
 
 mod codec;
+mod login;
 
-pub(crate) fn build(_app: &mut bevy::app::App) {}
+pub(crate) use codec::ProtocolCodec;
+
+pub(crate) fn build(app: &mut bevy::app::App) {
+    login::build(app);
+}

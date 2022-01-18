@@ -11,12 +11,14 @@
 //! * <https://wiki.vg/Protocol#Login>
 //! * <https://wiki.vg/Protocol_FAQ#What.27s_the_normal_login_sequence_for_a_client.3F>
 
+use std::{io::Write, str::FromStr};
+
 use bevy::prelude::*;
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};
 use brine_proto::{event, ClientboundEvent, ServerboundEvent};
-use minecraft_protocol::data::chat;
+use steven_protocol::protocol::{Serializable, VarInt};
 
-use super::codec::{proto, ClientboundPacket, ProtocolCodec, ServerboundPacket};
+use super::codec::{packet, Packet, ProtocolCodec, PROTOCOL_VERSION};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum LoginState {
@@ -110,24 +112,12 @@ fn send_handshake_and_login_start(
 
             debug!("Sending Handshake and LoginStart packets.");
 
-            let handshake = ServerboundPacket::Handshake(
-                proto::handshake::HandshakeServerBoundPacket::Handshake(
-                    proto::handshake::Handshake {
-                        protocol_version: 498,
-                        server_addr: "".to_string(),
-                        server_port: 0,
-                        next_state: 2,
-                    },
-                ),
-            );
+            let handshake = make_handshake_packet(PROTOCOL_VERSION);
             trace!("{:#?}", &handshake);
             codec_writer.send(handshake);
 
-            let login_start = ServerboundPacket::Login(
-                proto::login::LoginServerBoundPacket::LoginStart(proto::login::LoginStart {
-                    name: login_resource.username.clone(),
-                }),
-            );
+            let login_start =
+                make_login_start_packet(PROTOCOL_VERSION, login_resource.username.clone());
             trace!("{:#?}", &login_start);
             codec_writer.send(login_start);
 
@@ -146,32 +136,38 @@ fn await_login_success(
     mut event_writer: EventWriter<ClientboundEvent>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
+    let mut on_login_success = |username: String, uuid: event::Uuid| {
+        info!("Successfully logged in to server.");
+
+        event_writer.send(ClientboundEvent::LoginSuccess(
+            event::clientbound::LoginSuccess { username, uuid },
+        ));
+
+        login_state.set(LoginState::LoggedIn).unwrap();
+    };
+
     for packet in codec_reader.iter() {
         match packet {
-            ClientboundPacket::Login(proto::login::LoginClientBoundPacket::LoginSuccess(
-                login_success,
-            )) => {
-                info!("Successfully logged in to server.");
+            Packet::Known(packet::Packet::LoginSuccess_String(login_success)) => {
+                on_login_success(
+                    login_success.username.clone(),
+                    event::Uuid::from_str(&login_success.uuid).unwrap(),
+                );
+                break;
+            }
+            Packet::Known(packet::Packet::LoginSuccess_UUID(login_success)) => {
+                // Grr, Steven, y u no make fields public!
+                let mut uuid_bytes = Vec::with_capacity(16);
+                login_success.uuid.write_to(&mut uuid_bytes).unwrap();
+                let uuid = event::Uuid::from_bytes(uuid_bytes.try_into().unwrap());
 
-                let event = ClientboundEvent::LoginSuccess(event::clientbound::LoginSuccess {
-                    username: login_success.username.clone(),
-                    uuid: event::Uuid::from_bytes(*login_success.uuid.as_bytes()),
-                });
-                event_writer.send(event);
-
-                login_state.set(LoginState::LoggedIn).unwrap();
+                on_login_success(login_success.username.clone(), uuid);
                 break;
             }
 
-            ClientboundPacket::Login(proto::login::LoginClientBoundPacket::LoginDisconnect(
-                login_disconnect,
-            )) => {
-                let message = match login_disconnect.reason.payload {
-                    chat::Payload::Text { ref text } => format!("Login disconnect: {}", text),
-                    _ => "Login disconnect: unknown reason".to_string(),
-                };
+            Packet::Known(packet::Packet::LoginDisconnect(login_disconnect)) => {
+                let message = format!("Login disconnect: {}", login_disconnect.reason);
                 error!("{}", &message);
-                debug!("{:?}", &login_disconnect.reason);
 
                 let event = ClientboundEvent::LoginFailure(event::clientbound::LoginFailure {
                     reason: message,
@@ -185,4 +181,21 @@ fn await_login_success(
             _ => {}
         }
     }
+}
+
+fn make_handshake_packet(protocol_version: i32) -> Packet {
+    Packet::Known(packet::Packet::Handshake(Box::new(
+        packet::handshake::serverbound::Handshake {
+            protocol_version: VarInt(protocol_version),
+            // Next state to go to (1 for status, 2 for login)
+            next: VarInt(2),
+            ..Default::default()
+        },
+    )))
+}
+
+fn make_login_start_packet(_protocol_version: i32, username: String) -> Packet {
+    Packet::Known(packet::Packet::LoginStart(Box::new(
+        packet::login::serverbound::LoginStart { username },
+    )))
 }

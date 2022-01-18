@@ -1,5 +1,6 @@
 use std::io::{self, Cursor, Read, Write};
 
+use bevy::log;
 use steven_protocol::protocol::{self, Direction, PacketType, Serializable, State, VarInt};
 pub(crate) use steven_protocol::protocol::{packet, Error};
 
@@ -9,15 +10,17 @@ use crate::codec::{
     IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState, UnknownPacket,
 };
 
+pub(crate) const PROTOCOL_VERSION: i32 = 498;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
-    Known(Box<packet::Packet>),
+    Known(packet::Packet),
     Unknown(UnknownPacket),
 }
 
 impl From<packet::Packet> for Packet {
     fn from(packet: packet::Packet) -> Self {
-        Self::Known(Box::new(packet))
+        Self::Known(packet)
     }
 }
 
@@ -74,6 +77,14 @@ impl MinecraftCodec {
         let length_length = cursor.position() as usize;
 
         let total_bytes_needed = length_length + length;
+        if buf.len() < total_bytes_needed {
+            return Err(Error::IOError(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Not enough bytes in buffer",
+            )));
+        }
+
+        let mut cursor = Cursor::new(&buf[length_length..total_bytes_needed]);
 
         let id = VarInt::read_from(&mut cursor)?.0;
 
@@ -87,9 +98,9 @@ impl MinecraftCodec {
             &mut cursor,
         )
         .map(|maybe_packet| match maybe_packet {
-            Some(packet) => Packet::Known(Box::new(packet)),
+            Some(packet) => Packet::Known(packet),
             None => {
-                let mut body = Vec::<u8>::new();
+                let mut body = Vec::new();
                 cursor_clone.read_to_end(&mut body).unwrap();
                 Packet::Unknown(UnknownPacket {
                     packet_id: id,
@@ -98,21 +109,35 @@ impl MinecraftCodec {
             }
         })?;
 
+        assert_eq!(cursor.position() as usize, length);
         Ok((total_bytes_needed, packet))
     }
 
     fn encode_packet(&self, packet: &Packet, mut buf: impl AsMut<[u8]>) -> Result<usize, Error> {
         match packet {
             Packet::Known(packet) => {
+                let buf = buf.as_mut();
+
                 let payload = self.encode_packet_id_and_body(packet)?;
-                let length = payload.len() as i32;
+                let length = payload.len();
 
-                let mut cursor = Cursor::new(buf.as_mut());
+                let mut cursor = Cursor::new(buf);
 
-                VarInt(length).write_to(&mut cursor)?;
+                VarInt(length as i32).write_to(&mut cursor)?;
+                let length_length = cursor.position() as usize;
+
+                let total_bytes_needed = length_length + length;
+                if cursor.get_ref().len() < total_bytes_needed {
+                    return Err(Error::IOError(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "Not enough bytes in buffer",
+                    )));
+                }
+
                 cursor.write_all(&payload[..])?;
 
-                Ok(cursor.position() as usize)
+                assert_eq!(cursor.position() as usize, total_bytes_needed);
+                Ok(total_bytes_needed)
             }
             Packet::Unknown(packet) => Err(Error::Err(format!(
                 "Attempted to encode unknown packet: {:?}",
@@ -167,9 +192,23 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Self::Item, Self::Error>) {
-        MinecraftCodec::new(self.state.state(), 498, Direction::Clientbound)
-            .decode_packet(buf)
-            .into_decode_result()
+        let result =
+            MinecraftCodec::new(self.state.state(), PROTOCOL_VERSION, Direction::Clientbound)
+                .decode_packet(buf);
+
+        // Advance to state Play if the packet we just decoded was LoginSuccess.
+        if let Ok((
+            _,
+            Packet::Known(
+                packet::Packet::LoginSuccess_String(_) | packet::Packet::LoginSuccess_UUID(_),
+            ),
+        )) = result
+        {
+            log::debug!("Codec advancing to state Play");
+            self.state.set_state(MinecraftProtocolState::Play);
+        }
+
+        result.into_decode_result()
     }
 }
 
@@ -209,7 +248,7 @@ mod test {
         packet: packet::Packet,
         bytes: &[u8],
     ) {
-        let expected = encode_packet_from_file(packet.packet_id(498) as u8, bytes);
+        let expected = encode_packet_from_file(packet.packet_id(PROTOCOL_VERSION) as u8, bytes);
         let mut actual = Vec::<u8>::new();
 
         let mut framed = Framed::new(&mut actual, codec);

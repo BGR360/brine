@@ -15,6 +15,6 @@ members = [
 
 [dependencies]
 brine_proto = { path = "./crates/brine_proto" }
-brine_proto_backend = { path = "./crates/brine_proto_backend" }
+brine_proto_backend = { path = "./crates/brine_proto_backend", features = ["steven_proto"] }
 
 bevy = { version = "0.6.0" }

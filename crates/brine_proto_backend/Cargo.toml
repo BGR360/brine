@@ -3,6 +3,17 @@ name = "brine_proto_backend"
 version = "0.0.0"
 edition = "2021"
 
+[features]
+# Uses the minecraft-protocol crate for the backend implementation.
+minecraft_proto = []
+
+# Uses the steven_protocol crate from stevenarella for the backend
+# implementation.
+steven_proto = []
+
+# Use stevenarella by default
+default = ["steven_proto"]
+
 [dependencies]
 bevy = "0.6.0"
 minecraft-protocol = { git = "https://github.com/bgr360/minecraft-protocol", branch = "my-fork" }
