@@ -115,9 +115,7 @@ mod test {
     #[async_std::test]
     async fn test_login_start() {
         do_packet_encode_test(
-            include_bytes!(
-                "../../../test/minecraft-protocol/protocol/test/packet/login/login_start.dat"
-            ),
+            include_bytes!("../../../test/packet-data/login/login_start.dat"),
             ServerboundPacket::Login(proto::login::LoginServerBoundPacket::LoginStart(
                 proto::login::LoginStart {
                     name: String::from("Username"),
@@ -130,9 +128,7 @@ mod test {
     #[async_std::test]
     async fn test_login_success() {
         do_packet_decode_test(
-            include_bytes!(
-                "../../../test/minecraft-protocol/protocol/test/packet/login/login_success.dat"
-            ),
+            include_bytes!("../../../test/packet-data/login/login_success.dat"),
             ClientboundPacket::Login(proto::login::LoginClientBoundPacket::LoginSuccess(
                 proto::login::LoginSuccess {
                     uuid: Uuid::parse_str("35ee313b-d89a-41b8-b25e-d32e8aff0389").unwrap(),

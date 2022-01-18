@@ -1,5 +1,5 @@
 [submodule "crates/minecraft-protocol"]
-	path = crates/brine_proto_backend/test/minecraft-protocol
+	path = third_party/minecraft-protocol
 	url = https://github.com/BGR360/minecraft-protocol.git
 	branch = my-fork
 [submodule "third_party/stevenarella"]
