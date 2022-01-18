@@ -4,6 +4,7 @@ mod codec;
 mod plugin;
 
 mod backend_minecraft_protocol;
+mod backend_stevenarella;
 
 pub(crate) use backend_minecraft_protocol as backend;
 

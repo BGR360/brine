@@ -10,10 +10,11 @@ members = [
     './crates/brine_net',
     './crates/brine_proto',
     './crates/brine_proto_backend',
+    './third_party/stevenarella/protocol',
 ]
 
 [dependencies]
-bevy = { version = "0.6.0", features = ["dynamic"] }
-
 brine_proto = { path = "./crates/brine_proto" }
 brine_proto_backend = { path = "./crates/brine_proto_backend" }
+
+bevy = { version = "0.6.0" }

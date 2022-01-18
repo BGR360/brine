@@ -90,7 +90,7 @@ mod test {
             ServerboundPacket::Handshake(_) => MinecraftProtocolState::Handshaking,
             ServerboundPacket::Login(_) => MinecraftProtocolState::Login,
         };
-        let codec = MinecraftClientCodec::new(protocol_state);
+        let codec = MinecraftClientCodec::<MinecraftCodec>::new(protocol_state);
         let mut framed = Framed::new(&mut actual, codec);
 
         framed.send(packet).await.unwrap();
@@ -105,7 +105,7 @@ mod test {
             ClientboundPacket::Play(_) => MinecraftProtocolState::Play,
             ClientboundPacket::Unknown(_) => panic!("not allowed"),
         };
-        let codec = MinecraftClientCodec::new(protocol_state);
+        let codec = MinecraftClientCodec::<MinecraftCodec>::new(protocol_state);
         let mut framed = Framed::new(&reader[..], codec);
 
         let actual = framed.next().await.unwrap().unwrap();

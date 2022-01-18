@@ -1,6 +1,7 @@
 //! Backend-independent definitions for the Minecraft protocol codec.
 
 use std::{
+    fmt,
     marker::PhantomData,
     sync::{
         atomic::{AtomicU8, Ordering},
@@ -16,6 +17,37 @@ pub(crate) enum MinecraftProtocolState {
     Status,
     Login,
     Play,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct UnknownPacket {
+    pub packet_id: i32,
+    pub body: Vec<u8>,
+}
+
+impl fmt::Debug for UnknownPacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnknownPacket")
+            .field("packet_id", &self.packet_id)
+            .field("body", &hex_dump(&self.body))
+            .finish()
+    }
+}
+
+fn hex_dump(bytes: &impl AsRef<[u8]>) -> String {
+    const CONFIG: pretty_hex::HexConfig = pretty_hex::HexConfig {
+        // Do not print a title.
+        title: false,
+        // Print all bytes on one line.
+        width: 0,
+        // Do not group the bytes.
+        group: 0,
+        // Do not split bytes into chunks.
+        chunk: 0,
+        // Include an ASCII representation at the end.
+        ascii: true,
+    };
+    pretty_hex::config_hex(bytes, CONFIG)
 }
 
 pub(crate) trait IntoDecodeResult {

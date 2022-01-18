@@ -1,12 +1,9 @@
-use std::{
-    fmt,
-    io::{self, Cursor, Read},
-};
+use std::io::{self, Cursor, Read};
 
 use minecraft_protocol::decoder::DecoderReadExt;
 pub use minecraft_protocol::error::DecodeError;
 
-use crate::codec::{IntoDecodeResult, MinecraftProtocolState};
+use crate::codec::{IntoDecodeResult, MinecraftProtocolState, UnknownPacket};
 
 use super::{proto, MinecraftCodec};
 
@@ -34,40 +31,9 @@ impl ClientboundPacket {
         match self {
             Self::Login(p) => p.get_type_id(),
             Self::Play(p) => p.get_type_id(),
-            Self::Unknown(p) => p.packet_id,
+            Self::Unknown(p) => p.packet_id as u8,
         }
     }
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct UnknownPacket {
-    packet_id: u8,
-    body: Vec<u8>,
-}
-
-impl fmt::Debug for UnknownPacket {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UnknownPacket")
-            .field("packet_id", &self.packet_id)
-            .field("body", &hex_dump(&self.body))
-            .finish()
-    }
-}
-
-fn hex_dump(bytes: &impl AsRef<[u8]>) -> String {
-    const CONFIG: pretty_hex::HexConfig = pretty_hex::HexConfig {
-        // Do not print a title.
-        title: false,
-        // Print all bytes on one line.
-        width: 0,
-        // Do not group the bytes.
-        group: 0,
-        // Do not split bytes into chunks.
-        chunk: 0,
-        // Include an ASCII representation at the end.
-        ascii: true,
-    };
-    pretty_hex::config_hex(bytes, CONFIG)
 }
 
 type DecodeResult<T> = Result<T, DecodeError>;
@@ -107,7 +73,7 @@ impl MinecraftCodec {
                     cursor_clone.read_exact(&mut body_bytes).unwrap();
 
                     let unknown_packet = ClientboundPacket::Unknown(UnknownPacket {
-                        packet_id: type_id,
+                        packet_id: type_id as i32,
                         body: body_bytes,
                     });
 

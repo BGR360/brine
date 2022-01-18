@@ -10,6 +10,7 @@ pretty-hex = "0.2"
 
 brine_net = { path = "../brine_net" }
 brine_proto = { path = "../brine_proto" }
+steven_protocol = { path = "../../third_party/stevenarella/protocol" }
 
 [dev-dependencies]
 assert_matches = "1"
