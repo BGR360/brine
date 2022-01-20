@@ -6,11 +6,15 @@ pub(crate) use steven_protocol::protocol::{packet, Error};
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
-use crate::codec::{
-    IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState, UnknownPacket,
+use crate::{
+    codec::{
+        IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState,
+        UnknownPacket,
+    },
+    version::get_protocol_version,
 };
 
-pub(crate) const PROTOCOL_VERSION: i32 = 498;
+pub(crate) const VERSION: &str = "1.14.4";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
@@ -192,9 +196,12 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Self::Item, Self::Error>) {
-        let result =
-            MinecraftCodec::new(self.state.state(), PROTOCOL_VERSION, Direction::Clientbound)
-                .decode_packet(buf);
+        let result = MinecraftCodec::new(
+            self.state.state(),
+            get_protocol_version(VERSION).unwrap(),
+            Direction::Clientbound,
+        )
+        .decode_packet(buf);
 
         // Advance to state Play if the packet we just decoded was LoginSuccess.
         if let Ok((
@@ -217,9 +224,13 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
     type Error = Error;
 
     fn encode(&mut self, item: &Self::Item, buf: &mut [u8]) -> EncodeResult<Self::Error> {
-        MinecraftCodec::new(self.state.state(), 498, Direction::Serverbound)
-            .encode_packet(item, buf)
-            .into_encode_result()
+        MinecraftCodec::new(
+            self.state.state(),
+            get_protocol_version(VERSION).unwrap(),
+            Direction::Serverbound,
+        )
+        .encode_packet(item, buf)
+        .into_encode_result()
     }
 }
 
@@ -233,6 +244,8 @@ mod test {
     use futures::{sink::SinkExt, stream::StreamExt};
 
     use crate::codec::MinecraftClientCodec;
+
+    const PROTOCOL_VERSION: i32 = 498;
 
     fn encode_packet_from_file(id: u8, body_bytes: &[u8]) -> Vec<u8> {
         let mut vec = Vec::new();

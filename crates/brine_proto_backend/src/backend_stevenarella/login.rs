@@ -18,7 +18,9 @@ use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkRes
 use brine_proto::{event, ClientboundEvent, ServerboundEvent};
 use steven_protocol::protocol::{Serializable, VarInt};
 
-use super::codec::{packet, Packet, ProtocolCodec, PROTOCOL_VERSION};
+use crate::version::get_protocol_version;
+
+use super::codec::{packet, Packet, ProtocolCodec, VERSION};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum LoginState {
@@ -112,12 +114,14 @@ fn send_handshake_and_login_start(
 
             debug!("Sending Handshake and LoginStart packets.");
 
-            let handshake = make_handshake_packet(PROTOCOL_VERSION);
+            let protocol_version = get_protocol_version(VERSION).unwrap();
+
+            let handshake = make_handshake_packet(protocol_version);
             trace!("{:#?}", &handshake);
             codec_writer.send(handshake);
 
             let login_start =
-                make_login_start_packet(PROTOCOL_VERSION, login_resource.username.clone());
+                make_login_start_packet(protocol_version, login_resource.username.clone());
             trace!("{:#?}", &login_start);
             codec_writer.send(login_start);
 

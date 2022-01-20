@@ -2,6 +2,7 @@
 
 mod codec;
 mod plugin;
+mod version;
 
 #[cfg(any(test, feature = "minecraft_proto"))]
 mod backend_minecraft_protocol;
