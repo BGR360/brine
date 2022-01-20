@@ -15,7 +15,9 @@ steven_proto = []
 default = ["steven_proto"]
 
 [dependencies]
-bevy = "0.6.0"
+bevy_app = "0.6"
+bevy_ecs = "0.6"
+bevy_log = "0.6"
 minecraft-protocol = { git = "https://github.com/bgr360/minecraft-protocol", branch = "my-fork" }
 pretty-hex = "0.2"
 serde_json = "1"

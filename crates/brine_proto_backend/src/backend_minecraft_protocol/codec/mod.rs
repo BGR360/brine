@@ -1,4 +1,4 @@
-use bevy::log;
+use bevy_log as log;
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 

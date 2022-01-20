@@ -1,6 +1,6 @@
 use std::io::{self, Cursor, Read, Write};
 
-use bevy::log;
+use bevy_log as log;
 use steven_protocol::protocol::{self, Direction, PacketType, Serializable, State, VarInt};
 pub(crate) use steven_protocol::protocol::{packet, Error};
 

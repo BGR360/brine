@@ -13,6 +13,9 @@ members = [
     './third_party/stevenarella/protocol',
 ]
 
+[profile.dev]
+split-debuginfo = "unpacked"
+
 [dependencies]
 brine_proto = { path = "./crates/brine_proto" }
 brine_proto_backend = { path = "./crates/brine_proto_backend", features = ["steven_proto"] }

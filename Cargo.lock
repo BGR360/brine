@@ -973,7 +973,9 @@ dependencies = [
 name = "brine_proto"
 version = "0.0.0"
 dependencies = [
- "bevy",
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_log",
  "uuid 0.8.2",
 ]
 
@@ -984,7 +986,9 @@ dependencies = [
  "assert_matches",
  "async-codec",
  "async-std",
- "bevy",
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_log",
  "brine_net",
  "brine_proto",
  "futures",

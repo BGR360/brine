@@ -31,14 +31,17 @@
 
 use std::str::FromStr;
 
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log::prelude::*;
+use steven_protocol::protocol::{Serializable, VarInt};
+
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};
 use brine_proto::event::{
     clientbound::{LoginFailure, LoginSuccess},
     serverbound::Login,
     Uuid,
 };
-use steven_protocol::protocol::{Serializable, VarInt};
 
 use crate::codec::{HANDSHAKE_LOGIN_NEXT, HANDSHAKE_STATUS_NEXT};
 
@@ -105,6 +108,11 @@ fn handle_connection_error(
 }
 
 mod protocol_discovery {
+    use bevy_ecs::{
+        schedule::SystemSet,
+        system::{Commands, Res},
+    };
+
     use super::*;
 
     pub(crate) fn build(app: &mut App) {
