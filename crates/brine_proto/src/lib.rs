@@ -3,5 +3,4 @@
 pub mod event;
 mod plugin;
 
-pub use event::{ClientboundEvent, ServerboundEvent};
 pub use plugin::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};

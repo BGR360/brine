@@ -10,19 +10,6 @@
 
 pub use uuid::Uuid;
 
-/// Events sent from the client to the server.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ServerboundEvent {
-    Login(serverbound::Login),
-}
-
-/// Events received by the client from the server.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ClientboundEvent {
-    LoginSuccess(clientbound::LoginSuccess),
-    LoginFailure(clientbound::LoginFailure),
-}
-
 pub mod serverbound {
     //! Definitions for all variants of [`ServerboundEvent`][super::ServerboundEvent].
 
@@ -43,6 +30,10 @@ pub mod serverbound {
 
         /// Username being used to join the game.
         pub username: String,
+    }
+
+    pub(crate) fn add_events(app: &mut bevy::app::App) {
+        app.add_event::<Login>();
     }
 }
 
@@ -75,5 +66,10 @@ pub mod clientbound {
     pub struct LoginFailure {
         /// Human-readable reason for why the login failed.
         pub reason: String,
+    }
+
+    pub(crate) fn add_events(app: &mut bevy::app::App) {
+        app.add_event::<LoginSuccess>();
+        app.add_event::<LoginFailure>();
     }
 }

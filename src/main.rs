@@ -1,4 +1,4 @@
-use brine_proto::{event::serverbound::Login, ClientboundEvent, ServerboundEvent};
+use brine_proto::event::{clientbound::LoginSuccess, serverbound::Login};
 
 use bevy::{
     log::{Level, LogSettings},
@@ -29,20 +29,21 @@ enum AppState {
     Play,
 }
 
-fn initiate_login(mut tx: EventWriter<ServerboundEvent>) {
+fn initiate_login(mut login_events: EventWriter<Login>) {
     info!("Initiating login");
-    tx.send(ServerboundEvent::Login(Login {
+    login_events.send(Login {
         server: SERVER.to_string(),
         username: USERNAME.to_string(),
-    }));
+    });
 }
 
 /// System that advances to the Play state when a LoginSuccess event is received.
-fn advance_to_play(mut app_state: ResMut<State<AppState>>, mut rx: EventReader<ClientboundEvent>) {
-    for event in rx.iter() {
-        if let ClientboundEvent::LoginSuccess(_) = event {
-            info!("Login successful, advancing to state Play");
-            app_state.set(AppState::Play).unwrap();
-        }
+fn advance_to_play(
+    mut app_state: ResMut<State<AppState>>,
+    mut login_success_events: EventReader<LoginSuccess>,
+) {
+    if login_success_events.iter().last().is_some() {
+        info!("Login successful, advancing to state Play");
+        app_state.set(AppState::Play).unwrap();
     }
 }

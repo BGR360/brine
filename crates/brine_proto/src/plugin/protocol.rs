@@ -1,6 +1,6 @@
-use crate::event::{ClientboundEvent, ServerboundEvent};
-
 use bevy::prelude::*;
+
+use crate::event;
 
 /// Protocol "front-end" plugin.
 ///
@@ -27,7 +27,7 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ClientboundEvent>();
-        app.add_event::<ServerboundEvent>();
+        event::serverbound::add_events(app);
+        event::clientbound::add_events(app);
     }
 }

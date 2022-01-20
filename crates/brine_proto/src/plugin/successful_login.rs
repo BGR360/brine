@@ -1,4 +1,4 @@
-use crate::event::{clientbound::LoginSuccess, ClientboundEvent, ServerboundEvent};
+use crate::event::{clientbound::LoginSuccess, serverbound::Login, Uuid};
 
 use bevy::prelude::*;
 
@@ -38,19 +38,16 @@ enum ServerState {
 
 fn handle_login(
     mut state: ResMut<State<ServerState>>,
-    mut rx: EventReader<ServerboundEvent>,
-    mut tx: EventWriter<ClientboundEvent>,
+    mut rx: EventReader<Login>,
+    mut tx: EventWriter<LoginSuccess>,
 ) {
-    for event in rx.iter() {
-        if let ServerboundEvent::Login(login) = event {
-            debug!("Dummy server advancing to state Play");
-            state.set(ServerState::Play).unwrap();
+    if let Some(login) = rx.iter().last() {
+        debug!("Dummy server advancing to state Play");
+        state.set(ServerState::Play).unwrap();
 
-            tx.send(ClientboundEvent::LoginSuccess(LoginSuccess {
-                uuid: uuid::Uuid::new_v4(),
-                username: login.username.clone(),
-            }));
-            break;
-        }
+        tx.send(LoginSuccess {
+            uuid: Uuid::new_v4(),
+            username: login.username.clone(),
+        });
     }
 }

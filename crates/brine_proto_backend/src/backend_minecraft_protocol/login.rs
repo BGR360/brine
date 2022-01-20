@@ -13,7 +13,11 @@
 
 use bevy::prelude::*;
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};
-use brine_proto::{event, ClientboundEvent, ServerboundEvent};
+use brine_proto::event::{
+    clientbound::{LoginFailure, LoginSuccess},
+    serverbound::Login,
+    Uuid,
+};
 use minecraft_protocol::data::chat;
 
 use super::codec::{proto, ClientboundPacket, ProtocolCodec, ServerboundPacket};
@@ -47,48 +51,37 @@ pub(crate) fn build(app: &mut App) {
 
 /// System that listents for a Login event and intiates a connection to the server.
 fn connect_to_server(
-    mut event_reader: EventReader<ServerboundEvent>,
+    mut login_events: EventReader<Login>,
     mut login_state: ResMut<State<LoginState>>,
     mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
     mut commands: Commands,
 ) {
-    for event in event_reader.iter() {
-        match event {
-            ServerboundEvent::Login(login) => {
-                info!("Connecting to server");
-                net_resource.connect(login.server.clone());
+    if let Some(login) = login_events.iter().last() {
+        info!("Connecting to server");
+        net_resource.connect(login.server.clone());
 
-                commands.insert_resource(LoginResource {
-                    username: login.username.clone(),
-                });
+        commands.insert_resource(LoginResource {
+            username: login.username.clone(),
+        });
 
-                login_state.set(LoginState::Connecting).unwrap();
-                break;
-            }
-            _ => {
-                warn!("Unexpected serverbound event when no connection exists.");
-                debug!("{:#?}", event);
-            }
-        }
+        login_state.set(LoginState::Connecting).unwrap();
     }
 }
 
 /// System that listens for any connection failure event after the connection
 /// has started forming, and emits it as a LoginFailure event.
 fn handle_connection_error(
-    mut network_event_reader: EventReader<NetworkEvent<ProtocolCodec>>,
-    mut event_writer: EventWriter<ClientboundEvent>,
+    mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
+    mut login_failure_events: EventWriter<LoginFailure>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
-    for event in network_event_reader.iter() {
+    for event in network_events.iter() {
         if let NetworkEvent::Error(NetworkError::ConnectFailed(io_error)) = event {
             error!("Connection failed: {}", io_error);
 
-            event_writer.send(ClientboundEvent::LoginFailure(
-                event::clientbound::LoginFailure {
-                    reason: format!("Connection failed: {}", io_error),
-                },
-            ));
+            login_failure_events.send(LoginFailure {
+                reason: format!("Connection failed: {}", io_error),
+            });
 
             login_state.set(LoginState::NotStarted).unwrap();
             break;
@@ -99,12 +92,12 @@ fn handle_connection_error(
 /// System that listens for a successful connection event and then sends the
 /// first two packets of the login handshake.
 fn send_handshake_and_login_start(
-    mut network_event_reader: EventReader<NetworkEvent<ProtocolCodec>>,
-    mut codec_writer: CodecWriter<ProtocolCodec>,
+    mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
+    mut packet_writer: CodecWriter<ProtocolCodec>,
     mut login_state: ResMut<State<LoginState>>,
     login_resource: Res<LoginResource>,
 ) {
-    for event in network_event_reader.iter() {
+    for event in network_events.iter() {
         if let NetworkEvent::Connected = event {
             info!("Connection established. Logging in...");
 
@@ -121,7 +114,7 @@ fn send_handshake_and_login_start(
                 ),
             );
             trace!("{:#?}", &handshake);
-            codec_writer.send(handshake);
+            packet_writer.send(handshake);
 
             let login_start = ServerboundPacket::Login(
                 proto::login::LoginServerBoundPacket::LoginStart(proto::login::LoginStart {
@@ -129,7 +122,7 @@ fn send_handshake_and_login_start(
                 }),
             );
             trace!("{:#?}", &login_start);
-            codec_writer.send(login_start);
+            packet_writer.send(login_start);
 
             login_state
                 .set(LoginState::HandshakeAndLoginStartSent)
@@ -142,22 +135,22 @@ fn send_handshake_and_login_start(
 /// System that listens for either a LoginSuccess or LoginDisconnect packet and
 /// emits the proper event in response.
 fn await_login_success(
-    mut codec_reader: CodecReader<ProtocolCodec>,
-    mut event_writer: EventWriter<ClientboundEvent>,
+    mut packet_reader: CodecReader<ProtocolCodec>,
+    mut login_success_events: EventWriter<LoginSuccess>,
+    mut login_failure_events: EventWriter<LoginFailure>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
-    for packet in codec_reader.iter() {
+    for packet in packet_reader.iter() {
         match packet {
             ClientboundPacket::Login(proto::login::LoginClientBoundPacket::LoginSuccess(
                 login_success,
             )) => {
                 info!("Successfully logged in to server.");
 
-                let event = ClientboundEvent::LoginSuccess(event::clientbound::LoginSuccess {
+                login_success_events.send(LoginSuccess {
                     username: login_success.username.clone(),
-                    uuid: event::Uuid::from_bytes(*login_success.uuid.as_bytes()),
+                    uuid: Uuid::from_bytes(*login_success.uuid.as_bytes()),
                 });
-                event_writer.send(event);
 
                 login_state.set(LoginState::LoggedIn).unwrap();
                 break;
@@ -173,10 +166,7 @@ fn await_login_success(
                 error!("{}", &message);
                 debug!("{:?}", &login_disconnect.reason);
 
-                let event = ClientboundEvent::LoginFailure(event::clientbound::LoginFailure {
-                    reason: message,
-                });
-                event_writer.send(event);
+                login_failure_events.send(LoginFailure { reason: message });
 
                 login_state.set(LoginState::NotStarted).unwrap();
                 break;
