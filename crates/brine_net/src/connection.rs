@@ -46,7 +46,7 @@ where
     /// Connects to a remote host and runs two background tasks to encode and
     /// decode network packets.
     pub(crate) async fn connect_and_run(self, peer_addr: String) {
-        log::info!("Connecting to {} ...", &peer_addr);
+        log::debug!("Connecting to {} ...", &peer_addr);
 
         let tcp_stream = match TcpStream::connect(peer_addr.clone()).await {
             Ok(stream) => stream,
@@ -56,7 +56,7 @@ where
             }
         };
 
-        log::info!("Connected to {}", &peer_addr);
+        log::debug!("Connected to {}", &peer_addr);
 
         self.send_event(NetworkEvent::Connected).await;
 
@@ -68,14 +68,14 @@ where
         futures::pin_mut!(peerbound_future, selfbound_future);
         futures::select! {
             _ = peerbound_future => {
-                log::info!("");
+                log::debug!("Sender side of the connection finished.");
             }
             _ = selfbound_future => {
-                log::info!("");
+                log::debug!("Receiver side of the connection finished.");
             }
         };
 
-        log::info!("Disconnected from {}", &peer_addr);
+        log::debug!("Disconnected from {}", &peer_addr);
 
         self.send_event(NetworkEvent::Disconnected).await;
     }
@@ -127,7 +127,7 @@ where
                     }
                 }
             } else {
-                log::info!("Remote host terminated the connection.");
+                log::debug!("Remote host terminated the connection.");
                 return;
             }
         }

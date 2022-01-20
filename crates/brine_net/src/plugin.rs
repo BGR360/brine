@@ -116,10 +116,16 @@ where
     /// forwards them through an [`EventWriter`] so they can be read by the
     /// appropriate [`EventReader`][bevy::ecs::event::EventReader].
     fn send_network_events(
-        net_resource: Res<NetworkResource<Codec>>,
+        mut net_resource: ResMut<NetworkResource<Codec>>,
         mut event_writer: EventWriter<NetworkEvent<Codec>>,
     ) {
         while let Ok(event) = net_resource.network_event_receiver.try_recv() {
+            // Clear the connection task if the connection has terminated,
+            // thus allowing a new connection to form in the future.
+            if let NetworkEvent::Disconnected = event {
+                net_resource.connection_task = None;
+            }
+
             event_writer.send(event);
         }
     }
