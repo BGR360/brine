@@ -6,12 +6,8 @@ pub(crate) use steven_protocol::protocol::{packet, Error};
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
-use crate::{
-    codec::{
-        IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState,
-        UnknownPacket,
-    },
-    version::get_protocol_version,
+use crate::codec::{
+    IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState, UnknownPacket,
 };
 
 pub(crate) const VERSION: &str = "1.14.4";
@@ -198,7 +194,7 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
     fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Self::Item, Self::Error>) {
         let result = MinecraftCodec::new(
             self.state.state(),
-            get_protocol_version(VERSION).unwrap(),
+            self.state.protocol_version(),
             Direction::Clientbound,
         )
         .decode_packet(buf);
@@ -226,7 +222,7 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
     fn encode(&mut self, item: &Self::Item, buf: &mut [u8]) -> EncodeResult<Self::Error> {
         MinecraftCodec::new(
             self.state.state(),
-            get_protocol_version(VERSION).unwrap(),
+            self.state.protocol_version(),
             Direction::Serverbound,
         )
         .encode_packet(item, buf)

@@ -4,12 +4,14 @@ use std::{
     fmt,
     marker::PhantomData,
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicI32, AtomicU8, Ordering},
         Arc,
     },
 };
 
 use brine_net::{DecodeResult, EncodeResult};
+
+use crate::version::get_protocol_version;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MinecraftProtocolState {
@@ -66,21 +68,31 @@ const STATUS: u8 = 1;
 const LOGIN: u8 = 2;
 const PLAY: u8 = 3;
 
+/// A protocol version has to be sent in the Handshake packet, even when
+/// attempting to discover the protocol version of the server. This is the value
+/// the backend should send when it does that.
+const DEFAULT_PROTOCOL_VERSION_STRING: &str = "1.14.4";
+
 pub(crate) struct CodecState {
     /// See note in [`brine_net`] docs to see why this needs to be atomic.
     state: AtomicU8,
+    /// See note in [`brine_net`] docs to see why this needs to be atomic.
+    protocol_version: AtomicI32,
 }
 
 impl Default for CodecState {
     fn default() -> Self {
         Self {
             state: AtomicU8::new(LOGIN),
+            protocol_version: AtomicI32::new(
+                get_protocol_version(DEFAULT_PROTOCOL_VERSION_STRING).unwrap(),
+            ),
         }
     }
 }
 
 impl CodecState {
-    pub(crate) fn state(&self) -> MinecraftProtocolState {
+    pub fn state(&self) -> MinecraftProtocolState {
         match self.state.load(Ordering::Relaxed) {
             HANDSHAKING => MinecraftProtocolState::Handshaking,
             STATUS => MinecraftProtocolState::Status,
@@ -90,7 +102,7 @@ impl CodecState {
         }
     }
 
-    pub(crate) fn set_state(&self, state: MinecraftProtocolState) {
+    pub fn set_state(&self, state: MinecraftProtocolState) {
         let as_int = match state {
             MinecraftProtocolState::Handshaking => HANDSHAKING,
             MinecraftProtocolState::Status => STATUS,
@@ -98,6 +110,15 @@ impl CodecState {
             MinecraftProtocolState::Play => PLAY,
         };
         self.state.store(as_int, Ordering::Relaxed);
+    }
+
+    pub fn protocol_version(&self) -> i32 {
+        self.protocol_version.load(Ordering::Relaxed)
+    }
+
+    pub fn set_protocol_version(&self, protocol_version: i32) {
+        self.protocol_version
+            .store(protocol_version, Ordering::Relaxed)
     }
 }
 
