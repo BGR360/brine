@@ -45,7 +45,7 @@ where
 
     /// Connects to a remote host and runs two background tasks to encode and
     /// decode network packets.
-    pub(crate) async fn connect_and_run(self, peer_addr: String) {
+    pub(crate) async fn connect_and_run(self, peer_addr: String, codec: Codec) {
         log::debug!("Connecting to {} ...", &peer_addr);
 
         let tcp_stream = match TcpStream::connect(peer_addr.clone()).await {
@@ -59,8 +59,6 @@ where
         log::debug!("Connected to {}", &peer_addr);
 
         self.send_event(NetworkEvent::Connected).await;
-
-        let codec = Codec::default();
 
         let peerbound_future = self.run_peerbound(tcp_stream.clone(), codec.clone()).fuse();
         let selfbound_future = self.run_selfbound(tcp_stream, codec).fuse();

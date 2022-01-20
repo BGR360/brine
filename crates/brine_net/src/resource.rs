@@ -18,6 +18,7 @@ where
     <Codec as Decode>::Error: Debug,
     <Codec as Encode>::Error: Debug,
 {
+    pub(crate) codec: Codec,
     pub(crate) task_pool: TaskPool,
     pub(crate) connection_task: Option<Task<()>>,
 
@@ -58,6 +59,7 @@ where
         let (selfbound_packet_sender, selfbound_packet_receiver) = unbounded();
 
         Self {
+            codec: Default::default(),
             task_pool,
             connection_task: None,
             network_event_sender,
@@ -67,6 +69,13 @@ where
             selfbound_packet_sender,
             selfbound_packet_receiver,
         }
+    }
+
+    /// Returns a reference to the network resource's codec.
+    ///
+    /// Can be used to alter parameters of the codec.
+    pub fn codec(&self) -> &Codec {
+        &self.codec
     }
 
     /// Establish a connection with a server that speaks this codec.
@@ -92,8 +101,9 @@ where
         } else {
             let connection = Connection::new(self);
 
+            let codec = self.codec.clone();
             self.connection_task = Some(self.task_pool.spawn(async move {
-                connection.connect_and_run(server_addr).await;
+                connection.connect_and_run(server_addr, codec).await;
             }));
         }
     }
