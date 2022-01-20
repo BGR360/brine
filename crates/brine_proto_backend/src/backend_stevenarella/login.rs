@@ -1,9 +1,27 @@
 //! Implementation of the Minecraft protocol login handshake.
 //!
 //! This is driven by only a single message from the user's point of view:
-//! [`ServerboundEvent::Login`]. These systems handle all of the login logic.
+//! [`Login`]. These systems handle all of the login logic.
 //!
 //! # The Login Process
+//!
+//! The login process consists of two phases:
+//!
+//! * Protocol Discovery
+//!   1. Client connects
+//!   1. C -> S: Handshake with Next State set to 1 (Status)
+//!   2. C -> S: Status Request
+//!   3. S -> C: Status Response (includes server's protocol version)
+//!   4. C -> S: Status Ping
+//!   5. S -> C: Status Pong
+//!   6. Server disconnects
+//!
+//! * Login (unauthenticated)
+//!   1. Client connects
+//!   2. C -> S: Handshake with Next State set to 2 (Login)
+//!   3. C -> S: Login Start
+//!   4. S -> C: Login Success
+//!   5. <play packets ...>
 //!
 //! See these pages for reference:
 //!
@@ -22,58 +40,51 @@ use brine_proto::event::{
 };
 use steven_protocol::protocol::{Serializable, VarInt};
 
-use crate::version::get_protocol_version;
+use crate::codec::{HANDSHAKE_LOGIN_NEXT, HANDSHAKE_STATUS_NEXT};
 
-use super::codec::{packet, Packet, ProtocolCodec, VERSION};
+use super::codec::{packet, Packet, ProtocolCodec};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum LoginState {
-    NotStarted,
-    Connecting,
-    HandshakeAndLoginStartSent,
-    LoggedIn,
+    Idle,
+
+    // Phase 1
+    StatusAwaitingConnect,
+    StatusAwaitingResponse,
+    StatusAwaitingDisconnect,
+
+    // Phase 2
+    LoginAwaitingConnect,
+    LoginAwaitingSuccess,
+
+    Done,
 }
 
+/// Keeps data around that is needed by systems occurring later in the state machine.
 struct LoginResource {
     username: String,
+    server_addr: String,
 }
 
 pub(crate) fn build(app: &mut App) {
-    app.add_state(LoginState::NotStarted);
+    app.add_state(LoginState::Idle);
 
-    app.add_system_set(SystemSet::on_update(LoginState::NotStarted).with_system(connect_to_server));
-    app.add_system_set(
-        SystemSet::on_update(LoginState::Connecting)
-            .with_system(handle_connection_error)
-            .with_system(send_handshake_and_login_start),
-    );
-    app.add_system_set(
-        SystemSet::on_update(LoginState::HandshakeAndLoginStartSent)
-            .with_system(await_login_success),
-    );
+    protocol_discovery::build(app);
+    login::build(app);
 }
 
-/// System that listents for a Login event and intiates a connection to the server.
-fn connect_to_server(
-    mut login_events: EventReader<Login>,
-    mut login_state: ResMut<State<LoginState>>,
-    mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
-    mut commands: Commands,
-) {
-    if let Some(login) = login_events.iter().last() {
-        info!("Connecting to server");
-        net_resource.connect(login.server.clone());
-
-        commands.insert_resource(LoginResource {
-            username: login.username.clone(),
-        });
-
-        login_state.set(LoginState::Connecting).unwrap();
-    }
+fn make_handshake_packet(protocol_version: i32, next_state: i32) -> Packet {
+    Packet::Known(packet::Packet::Handshake(Box::new(
+        packet::handshake::serverbound::Handshake {
+            protocol_version: VarInt(protocol_version),
+            // Next state to go to (1 for status, 2 for login)
+            next: VarInt(next_state),
+            ..Default::default()
+        },
+    )))
 }
 
-/// System that listens for any connection failure event after the connection
-/// has started forming, and emits it as a LoginFailure event.
+/// System that listens for any connection failure event and emits a LoginFailure event.
 fn handle_connection_error(
     mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
     mut login_failure_events: EventWriter<LoginFailure>,
@@ -87,108 +98,231 @@ fn handle_connection_error(
                 reason: format!("Connection failed: {}", io_error),
             });
 
-            login_state.set(LoginState::NotStarted).unwrap();
+            login_state.set(LoginState::Idle).unwrap();
             break;
         }
     }
 }
 
-/// System that listens for a successful connection event and then sends the
-/// first two packets of the login handshake.
-fn send_handshake_and_login_start(
-    mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
-    mut packet_writer: CodecWriter<ProtocolCodec>,
-    mut login_state: ResMut<State<LoginState>>,
-    login_resource: Res<LoginResource>,
-) {
-    for event in network_events.iter() {
-        if let NetworkEvent::Connected = event {
-            info!("Connection established. Logging in...");
+mod protocol_discovery {
+    use super::*;
 
-            debug!("Sending Handshake and LoginStart packets.");
+    pub(crate) fn build(app: &mut App) {
+        app.add_system_set(
+            SystemSet::on_update(LoginState::Idle).with_system(await_login_event_then_connect),
+        );
+        app.add_system_set(
+            SystemSet::on_update(LoginState::StatusAwaitingConnect)
+                .with_system(handle_connection_error)
+                .with_system(await_connect_then_send_handshake_and_status_request),
+        );
+        app.add_system_set(
+            SystemSet::on_update(LoginState::StatusAwaitingResponse)
+                .with_system(await_response_then_send_status_ping),
+        );
+        app.add_system_set(
+            SystemSet::on_update(LoginState::StatusAwaitingDisconnect)
+                .with_system(await_disconnect_then_connect_for_login),
+        );
+    }
 
-            let protocol_version = get_protocol_version(VERSION).unwrap();
+    fn await_login_event_then_connect(
+        mut login_events: EventReader<Login>,
+        mut login_state: ResMut<State<LoginState>>,
+        mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
+        mut commands: Commands,
+    ) {
+        if let Some(login) = login_events.iter().last() {
+            info!("Logging in to server {}", login.server);
 
-            let handshake = make_handshake_packet(protocol_version);
-            trace!("{:#?}", &handshake);
-            packet_writer.send(handshake);
+            debug!("Connecting to server for protocol discovery.");
+            net_resource.connect(login.server.clone());
 
-            let login_start =
-                make_login_start_packet(protocol_version, login_resource.username.clone());
-            trace!("{:#?}", &login_start);
-            packet_writer.send(login_start);
+            commands.insert_resource(LoginResource {
+                username: login.username.clone(),
+                server_addr: login.server.clone(),
+            });
 
-            login_state
-                .set(LoginState::HandshakeAndLoginStartSent)
-                .unwrap();
-            break;
+            login_state.set(LoginState::StatusAwaitingConnect).unwrap();
         }
     }
-}
 
-/// System that listens for either a LoginSuccess or LoginDisconnect packet and
-/// emits the proper event in response.
-fn await_login_success(
-    mut packet_reader: CodecReader<ProtocolCodec>,
-    mut login_success_events: EventWriter<LoginSuccess>,
-    mut login_failure_events: EventWriter<LoginFailure>,
-    mut login_state: ResMut<State<LoginState>>,
-) {
-    let mut on_login_success = |username: String, uuid: Uuid| {
-        info!("Successfully logged in to server.");
+    fn await_connect_then_send_handshake_and_status_request(
+        mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
+        mut packet_writer: CodecWriter<ProtocolCodec>,
+        mut login_state: ResMut<State<LoginState>>,
+        net_resource: Res<NetworkResource<ProtocolCodec>>,
+    ) {
+        for event in network_events.iter() {
+            if let NetworkEvent::Connected = event {
+                debug!("Connection established. Sending Handshake and StatusRequest packets.");
 
-        login_success_events.send(LoginSuccess { username, uuid });
-
-        login_state.set(LoginState::LoggedIn).unwrap();
-    };
-
-    for packet in packet_reader.iter() {
-        match packet {
-            Packet::Known(packet::Packet::LoginSuccess_String(login_success)) => {
-                on_login_success(
-                    login_success.username.clone(),
-                    Uuid::from_str(&login_success.uuid).unwrap(),
+                let handshake = make_handshake_packet(
+                    net_resource.codec().protocol_version(),
+                    HANDSHAKE_STATUS_NEXT,
                 );
+                trace!("{:#?}", &handshake);
+                packet_writer.send(handshake);
+
+                let status_request = Packet::Known(packet::Packet::StatusRequest(Box::new(
+                    packet::status::serverbound::StatusRequest::default(),
+                )));
+                packet_writer.send(status_request);
+
+                login_state.set(LoginState::StatusAwaitingResponse).unwrap();
                 break;
             }
-            Packet::Known(packet::Packet::LoginSuccess_UUID(login_success)) => {
-                // Grr, Steven, y u no make fields public!
-                let mut uuid_bytes = Vec::with_capacity(16);
-                login_success.uuid.write_to(&mut uuid_bytes).unwrap();
-                let uuid = Uuid::from_bytes(uuid_bytes.try_into().unwrap());
+        }
+    }
 
-                on_login_success(login_success.username.clone(), uuid);
+    fn await_response_then_send_status_ping(
+        mut packet_reader: CodecReader<ProtocolCodec>,
+        mut packet_writer: CodecWriter<ProtocolCodec>,
+        mut login_state: ResMut<State<LoginState>>,
+        net_resource: Res<NetworkResource<ProtocolCodec>>,
+    ) {
+        for packet in packet_reader.iter() {
+            if let Packet::Known(packet::Packet::StatusResponse(_)) = packet {
+                // The codec will have already switched its internal protocol
+                // version in response to decoding the StatusResponse packet,
+                // so just read it from there.
+                let protocol_version = net_resource.codec().protocol_version();
+
+                debug!(
+                    "StatusResponse received. Server protocol version = {}",
+                    protocol_version
+                );
+
+                debug!("Sending StatusPing.");
+                let status_ping = Packet::Known(packet::Packet::StatusPing(Box::new(
+                    packet::status::serverbound::StatusPing::default(),
+                )));
+                packet_writer.send(status_ping);
+
+                login_state
+                    .set(LoginState::StatusAwaitingDisconnect)
+                    .unwrap();
                 break;
             }
+        }
+    }
 
-            Packet::Known(packet::Packet::LoginDisconnect(login_disconnect)) => {
-                let message = format!("Login disconnect: {}", login_disconnect.reason);
-                error!("{}", &message);
+    fn await_disconnect_then_connect_for_login(
+        mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
+        mut login_state: ResMut<State<LoginState>>,
+        mut net_resource: ResMut<NetworkResource<ProtocolCodec>>,
+        login_resource: Res<LoginResource>,
+    ) {
+        for event in network_events.iter() {
+            if let NetworkEvent::Disconnected = event {
+                debug!("Server disconnected as expected.");
+                debug!("Connecting to server for login.");
+                net_resource.connect(login_resource.server_addr.clone());
 
-                login_failure_events.send(LoginFailure { reason: message });
-
-                login_state.set(LoginState::NotStarted).unwrap();
-                break;
+                login_state.set(LoginState::LoginAwaitingConnect).unwrap();
             }
-
-            _ => {}
         }
     }
 }
 
-fn make_handshake_packet(protocol_version: i32) -> Packet {
-    Packet::Known(packet::Packet::Handshake(Box::new(
-        packet::handshake::serverbound::Handshake {
-            protocol_version: VarInt(protocol_version),
-            // Next state to go to (1 for status, 2 for login)
-            next: VarInt(2),
-            ..Default::default()
-        },
-    )))
-}
+#[allow(clippy::module_inception)]
+mod login {
+    use super::*;
 
-fn make_login_start_packet(_protocol_version: i32, username: String) -> Packet {
-    Packet::Known(packet::Packet::LoginStart(Box::new(
-        packet::login::serverbound::LoginStart { username },
-    )))
+    pub(crate) fn build(app: &mut App) {
+        app.add_system_set(
+            SystemSet::on_update(LoginState::LoginAwaitingConnect)
+                .with_system(handle_connection_error)
+                .with_system(await_connect_then_send_handshake_and_login_start),
+        );
+        app.add_system_set(
+            SystemSet::on_update(LoginState::LoginAwaitingSuccess).with_system(await_login_success),
+        );
+    }
+
+    fn make_login_start_packet(_protocol_version: i32, username: String) -> Packet {
+        Packet::Known(packet::Packet::LoginStart(Box::new(
+            packet::login::serverbound::LoginStart { username },
+        )))
+    }
+
+    /// System that listens for a successful connection event and then sends the
+    /// first two packets of the login exchange.
+    fn await_connect_then_send_handshake_and_login_start(
+        mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
+        mut packet_writer: CodecWriter<ProtocolCodec>,
+        mut login_state: ResMut<State<LoginState>>,
+        login_resource: Res<LoginResource>,
+        net_resource: Res<NetworkResource<ProtocolCodec>>,
+    ) {
+        for event in network_events.iter() {
+            if let NetworkEvent::Connected = event {
+                debug!("Connection established. Sending Handshake and LoginStart packets.");
+
+                let protocol_version = net_resource.codec().protocol_version();
+
+                let handshake = make_handshake_packet(protocol_version, HANDSHAKE_LOGIN_NEXT);
+                trace!("{:#?}", &handshake);
+                packet_writer.send(handshake);
+
+                let login_start =
+                    make_login_start_packet(protocol_version, login_resource.username.clone());
+                trace!("{:#?}", &login_start);
+                packet_writer.send(login_start);
+
+                login_state.set(LoginState::LoginAwaitingSuccess).unwrap();
+                break;
+            }
+        }
+    }
+
+    /// System that listens for either a LoginSuccess or LoginDisconnect packet and
+    /// emits the proper event in response.
+    fn await_login_success(
+        mut packet_reader: CodecReader<ProtocolCodec>,
+        mut login_success_events: EventWriter<LoginSuccess>,
+        mut login_failure_events: EventWriter<LoginFailure>,
+        mut login_state: ResMut<State<LoginState>>,
+    ) {
+        let mut on_login_success = |username: String, uuid: Uuid| {
+            info!("Successfully logged in to server.");
+
+            login_success_events.send(LoginSuccess { username, uuid });
+
+            login_state.set(LoginState::Done).unwrap();
+        };
+
+        for packet in packet_reader.iter() {
+            match packet {
+                Packet::Known(packet::Packet::LoginSuccess_String(login_success)) => {
+                    on_login_success(
+                        login_success.username.clone(),
+                        Uuid::from_str(&login_success.uuid).unwrap(),
+                    );
+                    break;
+                }
+                Packet::Known(packet::Packet::LoginSuccess_UUID(login_success)) => {
+                    // Grr, Steven, y u no make fields public!
+                    let mut uuid_bytes = Vec::with_capacity(16);
+                    login_success.uuid.write_to(&mut uuid_bytes).unwrap();
+                    let uuid = Uuid::from_bytes(uuid_bytes.try_into().unwrap());
+
+                    on_login_success(login_success.username.clone(), uuid);
+                    break;
+                }
+
+                Packet::Known(packet::Packet::LoginDisconnect(login_disconnect)) => {
+                    let message = format!("Login disconnect: {}", login_disconnect.reason);
+                    error!("{}", &message);
+
+                    login_failure_events.send(LoginFailure { reason: message });
+
+                    login_state.set(LoginState::Idle).unwrap();
+                    break;
+                }
+
+                _ => {}
+            }
+        }
+    }
 }

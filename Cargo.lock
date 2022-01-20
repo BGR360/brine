@@ -986,6 +986,7 @@ dependencies = [
  "futures",
  "minecraft-protocol",
  "pretty-hex",
+ "serde_json",
  "steven_protocol",
  "uuid 0.7.4",
 ]

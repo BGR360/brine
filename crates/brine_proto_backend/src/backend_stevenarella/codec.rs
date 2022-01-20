@@ -7,10 +7,9 @@ pub(crate) use steven_protocol::protocol::{packet, Error};
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
 use crate::codec::{
-    IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState, UnknownPacket,
+    IntoDecodeResult, IntoEncodeResult, MinecraftClientCodec, MinecraftProtocolState,
+    UnknownPacket, HANDSHAKE_LOGIN_NEXT, HANDSHAKE_STATUS_NEXT,
 };
-
-pub(crate) const VERSION: &str = "1.14.4";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
@@ -61,7 +60,6 @@ impl MinecraftCodec {
         protocol_version: i32,
         direction: Direction,
     ) -> Self {
-        protocol::set_current_protocol_version(protocol_version);
         Self {
             state,
             protocol_version,
@@ -187,11 +185,91 @@ impl IntoEncodeResult for Result<usize, Error> {
     }
 }
 
+impl MinecraftClientCodec<MinecraftCodec> {
+    pub fn protocol_version(&self) -> i32 {
+        self.state.protocol_version()
+    }
+
+    pub fn set_protocol_version(&self, protocol_version: i32) {
+        log::debug!("Setting codec protocol version to {}", protocol_version);
+        protocol::set_current_protocol_version(protocol_version);
+        self.state.set_protocol_version(protocol_version);
+    }
+
+    /// Makes any necessary adjustments to the codec state in response to
+    /// certain outbound or inbound packets.
+    fn react_to_packet(&self, packet: &Packet) {
+        match packet {
+            // On a Handshake packet, set the protocol state to whatever is
+            // specified by the `next` field.
+            Packet::Known(packet::Packet::Handshake(handshake)) => {
+                if let Some(next_state) = match handshake.next.0 {
+                    HANDSHAKE_STATUS_NEXT => Some(MinecraftProtocolState::Status),
+                    HANDSHAKE_LOGIN_NEXT => Some(MinecraftProtocolState::Login),
+                    i => {
+                        log::error!("Invalid next state in Handshake packet: {}", i);
+                        None
+                    }
+                } {
+                    log::debug!("Codec advancing to state {:?}", next_state);
+                    self.state.set_state(next_state);
+                }
+            }
+
+            // On a StatusResponse packet, set the protocol version to that of
+            // the server.
+            Packet::Known(packet::Packet::StatusResponse(status_response)) => {
+                let protocol_version = match self.get_server_protocol_version(&*status_response) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        log::error!("{}", e);
+                        return;
+                    }
+                };
+
+                self.set_protocol_version(protocol_version);
+            }
+
+            // On a LoginSuccess packet, advance to state Play.
+            Packet::Known(
+                packet::Packet::LoginSuccess_String(_) | packet::Packet::LoginSuccess_UUID(_),
+            ) => {
+                log::debug!("Codec advancing to state Play");
+                self.state.set_state(MinecraftProtocolState::Play);
+            }
+
+            _ => {}
+        }
+    }
+
+    /// Extracts the server's protocol version from a StatusResponse packet.
+    /// See https://wiki.vg/Server_List_Ping#Response
+    fn get_server_protocol_version(
+        &self,
+        status_response: &packet::status::clientbound::StatusResponse,
+    ) -> Result<i32, String> {
+        use serde_json::Value;
+        let status: Value =
+            serde_json::from_str(&status_response.status).map_err(|e| e.to_string())?;
+
+        let invalid_status =
+            || format!("Malformed StatusResponse json: {}", &status_response.status);
+
+        let version = status.get("version").ok_or_else(invalid_status)?;
+        let protocol_version = version
+            .get("protocol")
+            .and_then(Value::as_i64)
+            .ok_or_else(invalid_status)?;
+
+        Ok(protocol_version as i32)
+    }
+}
+
 impl Decode for MinecraftClientCodec<MinecraftCodec> {
     type Item = Packet;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Self::Item, Self::Error>) {
+    fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Packet, Error>) {
         let result = MinecraftCodec::new(
             self.state.state(),
             self.state.protocol_version(),
@@ -199,16 +277,8 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
         )
         .decode_packet(buf);
 
-        // Advance to state Play if the packet we just decoded was LoginSuccess.
-        if let Ok((
-            _,
-            Packet::Known(
-                packet::Packet::LoginSuccess_String(_) | packet::Packet::LoginSuccess_UUID(_),
-            ),
-        )) = result
-        {
-            log::debug!("Codec advancing to state Play");
-            self.state.set_state(MinecraftProtocolState::Play);
+        if let Ok((_, ref packet)) = result {
+            self.react_to_packet(packet);
         }
 
         result.into_decode_result()
@@ -219,13 +289,15 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
     type Item = Packet;
     type Error = Error;
 
-    fn encode(&mut self, item: &Self::Item, buf: &mut [u8]) -> EncodeResult<Self::Error> {
+    fn encode(&mut self, packet: &Packet, buf: &mut [u8]) -> EncodeResult<Error> {
+        self.react_to_packet(packet);
+
         MinecraftCodec::new(
             self.state.state(),
             self.state.protocol_version(),
             Direction::Serverbound,
         )
-        .encode_packet(item, buf)
+        .encode_packet(packet, buf)
         .into_encode_result()
     }
 }

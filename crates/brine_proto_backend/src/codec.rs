@@ -63,10 +63,15 @@ pub(crate) trait IntoEncodeResult {
     fn into_encode_result(self) -> EncodeResult<Self::Error>;
 }
 
+// Protocol states.
 const HANDSHAKING: u8 = 0;
 const STATUS: u8 = 1;
 const LOGIN: u8 = 2;
 const PLAY: u8 = 3;
+
+// Possible values for the `next` field in the Handshake packet.
+pub const HANDSHAKE_STATUS_NEXT: i32 = 1;
+pub const HANDSHAKE_LOGIN_NEXT: i32 = 2;
 
 /// A protocol version has to be sent in the Handshake packet, even when
 /// attempting to discover the protocol version of the server. This is the value
