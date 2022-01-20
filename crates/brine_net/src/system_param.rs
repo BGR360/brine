@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::ecs::{
+use bevy_ecs::{
     event::{EventReader, EventWriter},
     system::{Resource, SystemParam},
 };

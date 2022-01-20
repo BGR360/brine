@@ -3,15 +3,12 @@
 use std::{any::Any, fmt::Debug, marker::PhantomData};
 
 use async_codec::{Decode, Encode};
-use bevy::{
-    app::{App, Plugin},
-    ecs::{
-        event::{EventWriter, Events},
-        system::{Res, ResMut},
-    },
-    prelude::CoreStage,
-    tasks::IoTaskPool,
+use bevy_app::{App, CoreStage, Plugin};
+use bevy_ecs::{
+    event::{EventWriter, Events},
+    system::{Res, ResMut},
 };
+use bevy_tasks::IoTaskPool;
 
 use crate::{
     event::NetworkEvent,
