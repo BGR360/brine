@@ -1,6 +1,8 @@
 use crate::event::{clientbound::LoginSuccess, serverbound::Login, Uuid};
 
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log as log;
 
 /// A plugin that responds immediately with success to the first login request.
 ///
@@ -42,7 +44,7 @@ fn handle_login(
     mut tx: EventWriter<LoginSuccess>,
 ) {
     if let Some(login) = rx.iter().last() {
-        debug!("Dummy server advancing to state Play");
+        log::debug!("Dummy server advancing to state Play");
         state.set(ServerState::Play).unwrap();
 
         tx.send(LoginSuccess {

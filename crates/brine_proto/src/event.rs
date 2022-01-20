@@ -32,7 +32,7 @@ pub mod serverbound {
         pub username: String,
     }
 
-    pub(crate) fn add_events(app: &mut bevy::app::App) {
+    pub(crate) fn add_events(app: &mut bevy_app::App) {
         app.add_event::<Login>();
     }
 }
@@ -68,7 +68,7 @@ pub mod clientbound {
         pub reason: String,
     }
 
-    pub(crate) fn add_events(app: &mut bevy::app::App) {
+    pub(crate) fn add_events(app: &mut bevy_app::App) {
         app.add_event::<LoginSuccess>();
         app.add_event::<LoginFailure>();
     }
