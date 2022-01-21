@@ -7,6 +7,7 @@ edition = "2021"
 resolver = "2"
 members = [
     '.',
+    './crates/brine_chunk',
     './crates/brine_net',
     './crates/brine_proto',
     './crates/brine_proto_backend',

@@ -951,6 +951,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "brine_chunk"
+version = "0.0.0"
+
+[[package]]
 name = "brine_net"
 version = "0.0.0"
 dependencies = [
