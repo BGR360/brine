@@ -11,7 +11,7 @@ services:
       ONLINE_MODE: "FALSE"
       VIEW_DISTANCE: "10"
       MODE: "creative"
-      MEMORY: "2G"
+      MEMORY: "1G"
       NETWORK_COMPRESSION_THRESHOLD: "-1"
     tty: true
     stdin_open: true
