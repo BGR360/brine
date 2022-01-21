@@ -174,11 +174,11 @@ impl<T> IntoDecodeResult for Result<(usize, T), Error> {
 impl IntoEncodeResult for Result<usize, Error> {
     type Error = Error;
 
-    fn into_encode_result(self) -> EncodeResult<Self::Error> {
+    fn into_encode_result(self, buflen: usize) -> EncodeResult<Self::Error> {
         match self {
             Ok(length) => EncodeResult::Ok(length),
             Err(Error::IOError(io_error)) if io_error.kind() == io::ErrorKind::UnexpectedEof => {
-                EncodeResult::Overflow(0)
+                EncodeResult::Overflow(buflen * 2)
             }
             Err(err) => EncodeResult::Err(err),
         }
@@ -292,13 +292,15 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
     fn encode(&mut self, packet: &Packet, buf: &mut [u8]) -> EncodeResult<Error> {
         self.react_to_packet(packet);
 
+        let len = buf.len();
+
         MinecraftCodec::new(
             self.state.state(),
             self.state.protocol_version(),
             Direction::Serverbound,
         )
         .encode_packet(packet, buf)
-        .into_encode_result()
+        .into_encode_result(len)
     }
 }
 

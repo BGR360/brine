@@ -54,9 +54,10 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
     type Error = EncodeError;
 
     fn encode(&mut self, item: &Self::Item, buf: &mut [u8]) -> EncodeResult<Self::Error> {
+        let len = buf.len();
         MinecraftCodec::new(self.state.state())
             .encode_serverbound_packet(item, buf)
-            .into_encode_result()
+            .into_encode_result(len)
     }
 }
 

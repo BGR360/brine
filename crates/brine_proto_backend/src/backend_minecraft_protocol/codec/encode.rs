@@ -108,13 +108,13 @@ impl MinecraftCodec {
 impl IntoEncodeResult for EncodeResult<usize> {
     type Error = EncodeError;
 
-    fn into_encode_result(self) -> brine_net::EncodeResult<Self::Error> {
+    fn into_encode_result(self, bufsize: usize) -> brine_net::EncodeResult<Self::Error> {
         match self {
             Ok(length) => brine_net::EncodeResult::Ok(length),
             Err(EncodeError::IOError { io_error })
                 if io_error.kind() == io::ErrorKind::UnexpectedEof =>
             {
-                brine_net::EncodeResult::Overflow(0)
+                brine_net::EncodeResult::Overflow(bufsize * 2)
             }
             Err(err) => brine_net::EncodeResult::Err(err),
         }

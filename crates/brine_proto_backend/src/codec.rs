@@ -60,7 +60,7 @@ pub(crate) trait IntoDecodeResult {
 
 pub(crate) trait IntoEncodeResult {
     type Error;
-    fn into_encode_result(self) -> EncodeResult<Self::Error>;
+    fn into_encode_result(self, buflen: usize) -> EncodeResult<Self::Error>;
 }
 
 // Protocol states.
