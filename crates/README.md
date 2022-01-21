@@ -71,6 +71,12 @@ system. Start with the
 
 Defines a high-level abstraction of the Minecraft game logic.
 
+### [`brine_chunk`](brine_chunk/)
+
+Logic for decoding chunk data from Minecraft Java Edition packets.
+
+No Bevy dependencies.
+
 ### [`brine_proto_backend`](brine_proto_backend/)
 
 A backend implementation for Minecraft Java Edition. Currently powered by the
