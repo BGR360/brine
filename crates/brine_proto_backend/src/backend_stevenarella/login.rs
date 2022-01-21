@@ -5,7 +5,7 @@
 //!
 //! # The Login Process
 //!
-//! The login process consists of two phases:
+//! The login process consists of three phases:
 //!
 //! * Protocol Discovery
 //!   1. Client connects
@@ -21,7 +21,10 @@
 //!   2. C -> S: Handshake with Next State set to 2 (Login)
 //!   3. C -> S: Login Start
 //!   4. S -> C: Login Success
-//!   5. <play packets ...>
+//!
+//! * Play
+//!   * Periodic KeepAlive packets
+//!   * Other play packets
 //!
 //! See these pages for reference:
 //!
@@ -60,7 +63,7 @@ enum LoginState {
     LoginAwaitingConnect,
     LoginAwaitingSuccess,
 
-    Done,
+    Play,
 }
 
 /// Keeps data around that is needed by systems occurring later in the state machine.
@@ -74,6 +77,7 @@ pub(crate) fn build(app: &mut App) {
 
     protocol_discovery::build(app);
     login::build(app);
+    play::build(app);
 }
 
 fn make_handshake_packet(protocol_version: i32, next_state: i32) -> Packet {
@@ -108,11 +112,6 @@ fn handle_connection_error(
 }
 
 mod protocol_discovery {
-    use bevy_ecs::{
-        schedule::SystemSet,
-        system::{Commands, Res},
-    };
-
     use super::*;
 
     pub(crate) fn build(app: &mut App) {
@@ -297,7 +296,7 @@ mod login {
 
             login_success_events.send(LoginSuccess { username, uuid });
 
-            login_state.set(LoginState::Done).unwrap();
+            login_state.set(LoginState::Play).unwrap();
         };
 
         for packet in packet_reader.iter() {
@@ -330,6 +329,63 @@ mod login {
                 }
 
                 _ => {}
+            }
+        }
+    }
+}
+
+mod play {
+    use super::*;
+
+    pub(crate) fn build(app: &mut App) {
+        app.add_system_set(
+            SystemSet::on_update(LoginState::Play)
+                .with_system(respond_to_keep_alive_packets)
+                .with_system(handle_disconnect),
+        );
+    }
+
+    fn respond_to_keep_alive_packets(
+        mut packet_reader: CodecReader<ProtocolCodec>,
+        mut packet_writer: CodecWriter<ProtocolCodec>,
+    ) {
+        for packet in packet_reader.iter() {
+            let response = match packet {
+                Packet::Known(packet::Packet::KeepAliveClientbound_VarInt(keep_alive)) => {
+                    Packet::Known(packet::Packet::KeepAliveServerbound_VarInt(Box::new(
+                        packet::play::serverbound::KeepAliveServerbound_VarInt {
+                            id: keep_alive.id,
+                        },
+                    )))
+                }
+                Packet::Known(packet::Packet::KeepAliveClientbound_i32(keep_alive)) => {
+                    Packet::Known(packet::Packet::KeepAliveServerbound_i32(Box::new(
+                        packet::play::serverbound::KeepAliveServerbound_i32 { id: keep_alive.id },
+                    )))
+                }
+                Packet::Known(packet::Packet::KeepAliveClientbound_i64(keep_alive)) => {
+                    Packet::Known(packet::Packet::KeepAliveServerbound_i64(Box::new(
+                        packet::play::serverbound::KeepAliveServerbound_i64 { id: keep_alive.id },
+                    )))
+                }
+
+                _ => continue,
+            };
+
+            debug!("KeepAlive");
+            packet_writer.send(response);
+            break;
+        }
+    }
+
+    fn handle_disconnect(
+        mut packet_reader: CodecReader<ProtocolCodec>,
+        mut disconnect_events: EventWriter<Disconnect>,
+    ) {
+        for packet in packet_reader.iter() {
+            if let Packet::Known(packet::Packet::Disconnect(disconnect)) = packet {
+                let reason = disconnect.reason.to_string();
+                disconnect_events.send(Disconnect { reason });
             }
         }
     }
