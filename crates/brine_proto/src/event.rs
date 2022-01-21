@@ -1,11 +1,11 @@
 //! Events exported from this crate.
 //!
-//! The [`ServerboundEvent`] and [`ClientboundEvent`] enums define an API that
-//! plugins use to respond to Minecraft server packets and send client packets.
+//! These events define a high-level API for a Minecraft client that is
+//! compatible with multiple different server versions.
 //!
-//! The protocol defined by these events is similar but not identical to the
-//! actual Minecraft protocol defined at <https://wiki.vg/Protocol>. This API
-//! is a little more high-level, and the "back-end" is concerned with speaking
+//! The protocol defined by these events is similar but far from identical to
+//! the actual Minecraft protocol defined at <https://wiki.vg/Protocol>. This
+//! API is much more high-level, and the "back-end" is concerned with speaking
 //! the actual protocol and converting to and from this higher-level API.
 
 pub use uuid::Uuid;
@@ -23,6 +23,7 @@ pub mod serverbound {
     /// # See also
     ///
     /// * [`clientbound::LoginSuccess`]
+    /// * [`clientbound::Disconnect`]
     #[derive(Debug, Clone, PartialEq)]
     pub struct Login {
         /// Hostname or IP address of the server.
@@ -57,19 +58,22 @@ pub mod clientbound {
         pub username: String,
     }
 
-    /// Notifies the client that they failed to log in to the server.
+    /// Notifies the client they have been disconnected from the server.
     ///
-    /// # See also
-    ///
-    /// * [`serverbound::Login`]
+    /// This could happen for a number of reasons:
+    /// * Login failure.
+    /// * User is kicked from the server.
+    /// * Backend fails to keep the connection alive.
+    /// * Generic networking error.
+    /// * etc...
     #[derive(Debug, Clone, PartialEq)]
-    pub struct LoginFailure {
-        /// Human-readable reason for why the login failed.
+    pub struct Disconnect {
+        /// Human-readable reason for why the disconnect occurred.
         pub reason: String,
     }
 
     pub(crate) fn add_events(app: &mut bevy_app::App) {
         app.add_event::<LoginSuccess>();
-        app.add_event::<LoginFailure>();
+        app.add_event::<Disconnect>();
     }
 }

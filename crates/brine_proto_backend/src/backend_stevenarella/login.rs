@@ -38,7 +38,7 @@ use steven_protocol::protocol::{Serializable, VarInt};
 
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};
 use brine_proto::event::{
-    clientbound::{LoginFailure, LoginSuccess},
+    clientbound::{Disconnect, LoginSuccess},
     serverbound::Login,
     Uuid,
 };
@@ -90,14 +90,14 @@ fn make_handshake_packet(protocol_version: i32, next_state: i32) -> Packet {
 /// System that listens for any connection failure event and emits a LoginFailure event.
 fn handle_connection_error(
     mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
-    mut login_failure_events: EventWriter<LoginFailure>,
+    mut login_failure_events: EventWriter<Disconnect>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
     for event in network_events.iter() {
         if let NetworkEvent::Error(NetworkError::ConnectFailed(io_error)) = event {
             error!("Connection failed: {}", io_error);
 
-            login_failure_events.send(LoginFailure {
+            login_failure_events.send(Disconnect {
                 reason: format!("Connection failed: {}", io_error),
             });
 
@@ -289,7 +289,7 @@ mod login {
     fn await_login_success(
         mut packet_reader: CodecReader<ProtocolCodec>,
         mut login_success_events: EventWriter<LoginSuccess>,
-        mut login_failure_events: EventWriter<LoginFailure>,
+        mut disconnect_events: EventWriter<Disconnect>,
         mut login_state: ResMut<State<LoginState>>,
     ) {
         let mut on_login_success = |username: String, uuid: Uuid| {
@@ -323,7 +323,7 @@ mod login {
                     let message = format!("Login disconnect: {}", login_disconnect.reason);
                     error!("{}", &message);
 
-                    login_failure_events.send(LoginFailure { reason: message });
+                    disconnect_events.send(Disconnect { reason: message });
 
                     login_state.set(LoginState::Idle).unwrap();
                     break;

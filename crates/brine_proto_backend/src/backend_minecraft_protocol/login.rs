@@ -17,7 +17,7 @@ use bevy_log::prelude::*;
 
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};
 use brine_proto::event::{
-    clientbound::{LoginFailure, LoginSuccess},
+    clientbound::{Disconnect, LoginSuccess},
     serverbound::Login,
     Uuid,
 };
@@ -72,17 +72,17 @@ fn connect_to_server(
 }
 
 /// System that listens for any connection failure event after the connection
-/// has started forming, and emits it as a LoginFailure event.
+/// has started forming, and emits it as a Disconnect event.
 fn handle_connection_error(
     mut network_events: EventReader<NetworkEvent<ProtocolCodec>>,
-    mut login_failure_events: EventWriter<LoginFailure>,
+    mut login_failure_events: EventWriter<Disconnect>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
     for event in network_events.iter() {
         if let NetworkEvent::Error(NetworkError::ConnectFailed(io_error)) = event {
             error!("Connection failed: {}", io_error);
 
-            login_failure_events.send(LoginFailure {
+            login_failure_events.send(Disconnect {
                 reason: format!("Connection failed: {}", io_error),
             });
 
@@ -140,7 +140,7 @@ fn send_handshake_and_login_start(
 fn await_login_success(
     mut packet_reader: CodecReader<ProtocolCodec>,
     mut login_success_events: EventWriter<LoginSuccess>,
-    mut login_failure_events: EventWriter<LoginFailure>,
+    mut login_failure_events: EventWriter<Disconnect>,
     mut login_state: ResMut<State<LoginState>>,
 ) {
     for packet in packet_reader.iter() {
@@ -169,7 +169,7 @@ fn await_login_success(
                 error!("{}", &message);
                 debug!("{:?}", &login_disconnect.reason);
 
-                login_failure_events.send(LoginFailure { reason: message });
+                login_failure_events.send(Disconnect { reason: message });
 
                 login_state.set(LoginState::NotStarted).unwrap();
                 break;
