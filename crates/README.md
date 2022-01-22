@@ -3,28 +3,28 @@
 At the very highest level, the architecture of Brine looks like this:
 
 ```
-                          ┌──────────────────┐              
-                          │                  │              
-                      ┌──▶│  Brine Protocol  │◀──┐          
-                      │   │                  │   │          
-                      │   └──────────────────┘   │          
-                      │                          │          
-                      │                          │          
-                      ▼                          ▼          
-            ┌──────────────────┐       ┌──────────────────┐ 
-            │                  │       │                  │ 
-            │    Client App    │       │     Backend      │ 
-            │                  │       │                  │ 
-            └┬─────────────────┘       └┬─────────────────┘ 
-             │   .─────────────.        │   .─────────────. 
-             ├─▶(   Rendering   )       ├─▶(  Networking   )
-             │   `─────────────'        │   `─────────────' 
-             │   .─────────────.        │   .─────────────. 
-             ├─▶( Player Input  )       └─▶(  MC Protocol  )
-             │   `─────────────'            `─────────────' 
-             │   .─────────────.                            
-             └─▶(    Assets     )                           
-                 `─────────────'                            
+              ┌──────────────────┐              
+              │                  │              
+          ┌──▶│  Brine Protocol  │◀──┐          
+          │   │                  │   │          
+          │   └──────────────────┘   │          
+          │                          │          
+          │                          │          
+          ▼                          ▼          
+┌──────────────────┐       ┌──────────────────┐ 
+│                  │       │                  │ 
+│    Client App    │       │     Backend      │ 
+│                  │       │                  │ 
+└┬─────────────────┘       └┬─────────────────┘ 
+ │   .─────────────.        │   .─────────────. 
+ ├─▶(   Rendering   )       ├─▶(  Networking   )
+ │   `─────────────'        │   `─────────────' 
+ │   .─────────────.        │   .─────────────. 
+ ├─▶( Player Input  )       └─▶(  MC Protocol  )
+ │   `─────────────'            `─────────────' 
+ │   .─────────────.                            
+ └─▶(    Assets     )                           
+     `─────────────'                            
 ```
 
 The project is based around a high-level abstraction of the Minecraft game
@@ -44,32 +44,28 @@ system. Start with the
 ## Crate details
 
 ```
-                               ┌───────┐                
-                               │ brine │                
-                               └───────┘                
-                                   │                    
-                                   │                    
-                                   │                    
-                                   ▼                    
-                             ┌───────────┐              
-                             │brine_proto│              
-                             └───────────┘              
-                                   ▲                    
-                                   │                    
-                 ┌───────────┐     │     ┌─────────────┐
-                 │ brine_net │     │     │ brine_chunk │
-                 └───────────┘     │     └─────────────┘
-                       ▲           │            ▲       
-                       └───────────┼────────────┘       
-                                   │                    
-                        ┌─────────────────────┐         
-                        │ brine_proto_backend │         
-                        └─────────────────────┘         
+              ┌───────┐                
+              │ brine │                
+              └───────┘                
+                  │                    
+                  │                    
+                  │                    
+                  ▼                    
+            ┌───────────┐              
+            │brine_proto│              
+            └───────────┘              
+                  ▲                    
+                  │                    
+┌───────────┐     │     ┌─────────────┐
+│ brine_net │     │     │ brine_chunk │
+└───────────┘     │     └─────────────┘
+      ▲           │            ▲       
+      └───────────┼────────────┘       
+                  │                    
+       ┌─────────────────────┐         
+       │ brine_proto_backend │         
+       └─────────────────────┘         
 ```
-
-### [`brine_proto`](brine_proto/)
-
-Defines a high-level abstraction of the Minecraft game logic.
 
 ### [`brine_chunk`](brine_chunk/)
 
@@ -77,12 +73,16 @@ Logic for decoding chunk data from Minecraft Java Edition packets.
 
 No Bevy dependencies.
 
+### [`brine_net`](brine_net/)
+
+A library for easy TCP communication between a client and server.
+
+### [`brine_proto`](brine_proto/)
+
+Defines a high-level abstraction of the Minecraft game logic.
+
 ### [`brine_proto_backend`](brine_proto_backend/)
 
 A backend implementation for Minecraft Java Edition. Currently powered by the
 `steven_protocol` crate from the
 [`stevenarella`](https://github.com/iceiix/stevenarella) project.
-
-### [`brine_net`](brine_net/)
-
-A library for easy TCP communication between a client and server.
