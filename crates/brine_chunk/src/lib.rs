@@ -7,8 +7,9 @@ use std::{fmt, io, num::TryFromIntError};
 use byteorder::{BigEndian, ReadBytesExt};
 use tracing::trace;
 
+pub mod packed_vec;
 pub mod palette;
-pub mod varint;
+mod varint;
 
 pub use palette::{Palette, SectionPalette};
 use varint::VarIntRead;
@@ -33,7 +34,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// A [`Chunk`] is a 16x256x16 chunk of blocks. It is split vertically into 16 chunk
 /// sections (see [`ChunkSection`]).
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chunk {
     /// Chunk coordinate (block coordinate divided by 16, rounded down).
     pub chunk_x: i32,
@@ -146,7 +147,7 @@ impl Chunk {
 /// Chunk data can either be full or partial. In the former case, this
 /// represents a new chunk that the client should load. In the latter case, it
 /// serves as a big multi-block delta.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChunkData {
     Full {
         /// List of non-empty sections in this chunk, in increasing Y order.
@@ -171,7 +172,7 @@ impl Default for ChunkData {
 }
 
 /// A [`ChunkSection`] is a 16x16x16 cubic section of a [`Chunk`].
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChunkSection {
     /// Chunk coordinate (block coordinate divided by 16, rounded down).
     pub chunk_y: u8,
@@ -233,6 +234,7 @@ impl ChunkSection {
 /// The block state for every block in a [`ChunkSection`], stored in
 /// Y-Z-X-major order. In other words, an array of flat Z-X slices in increasing
 /// Y order.
+#[derive(Clone, PartialEq, Eq)]
 pub struct BlockStates(pub [BlockState; BLOCKS_PER_SECTION]);
 
 impl BlockStates {
@@ -270,7 +272,7 @@ impl fmt::Debug for BlockStates {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BlockState(pub u32);
 
 impl BlockState {
@@ -282,6 +284,7 @@ impl BlockState {
 
 /// Grid of biome IDs dictating which biome a given vertical X,Z slice of a
 /// [`Chunk`] is part of.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Biomes([BiomeId; SECTION_WIDTH * SECTION_WIDTH]);
 
 impl Biomes {
@@ -306,7 +309,7 @@ impl fmt::Debug for Biomes {
 /// Unique identifier for a biome.
 ///
 /// See <https://minecraft.fandom.com/wiki/Biome/ID?oldid=1278248>
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BiomeId(pub u16);
 
 impl BiomeId {
