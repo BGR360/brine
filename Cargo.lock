@@ -953,6 +953,13 @@ dependencies = [
 [[package]]
 name = "brine_chunk"
 version = "0.0.0"
+dependencies = [
+ "byteorder",
+ "minecraft-varint",
+ "steven_protocol",
+ "thiserror",
+ "tracing",
+]
 
 [[package]]
 name = "brine_net"
@@ -993,6 +1000,7 @@ dependencies = [
  "bevy_app",
  "bevy_ecs",
  "bevy_log",
+ "brine_chunk",
  "brine_net",
  "brine_proto",
  "futures",
@@ -2477,6 +2485,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "minecraft-varint"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e56e02d75c6e82ca643fd12b2bd409ce003376dd7535c385948b906de440c57c"
 
 [[package]]
 name = "miniz_oxide"

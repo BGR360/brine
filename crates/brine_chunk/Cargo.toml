@@ -4,3 +4,10 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+byteorder = "1"
+minecraft-varint = "0.2"
+thiserror = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+steven_protocol = { path = '../../third_party/stevenarella/protocol/' }
