@@ -72,8 +72,14 @@ pub mod clientbound {
         pub reason: String,
     }
 
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct ChunkData {
+        pub chunk_data: brine_chunk::Chunk,
+    }
+
     pub(crate) fn add_events(app: &mut bevy_app::App) {
         app.add_event::<LoginSuccess>();
         app.add_event::<Disconnect>();
+        app.add_event::<ChunkData>();
     }
 }

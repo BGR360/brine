@@ -987,6 +987,7 @@ dependencies = [
  "bevy_app",
  "bevy_ecs",
  "bevy_log",
+ "brine_chunk",
  "uuid 0.8.2",
 ]
 
