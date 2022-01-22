@@ -14,6 +14,8 @@ mod varint;
 pub use palette::{Palette, SectionPalette};
 use varint::VarIntRead;
 
+use crate::packed_vec::PackedIntVec;
+
 pub const CHUNK_HEIGHT: usize = 256;
 pub const CHUNK_WIDTH: usize = 16;
 pub const SECTION_HEIGHT: usize = 16;
@@ -213,6 +215,13 @@ impl ChunkSection {
         let bits_per_block = data.read_u8()?;
         trace!("bits_per_block: {}", bits_per_block);
 
+        // Protocol spec says any value below 4 should be treated as 4.
+        let bits_per_block = if bits_per_block < 4 {
+            4
+        } else {
+            bits_per_block
+        };
+
         let block_states = if bits_per_block <= SectionPalette::MAX_BITS_PER_BLOCK {
             let palette = SectionPalette::decode(global_palette, data)?;
 
@@ -240,8 +249,8 @@ pub struct BlockStates(pub [BlockState; BLOCKS_PER_SECTION]);
 impl BlockStates {
     /// See <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Compacted_data_array>.
     pub fn decode(
-        _bits_per_block: u8,
-        _palette: &impl Palette,
+        bits_per_block: u8,
+        palette: &impl Palette,
         data: &mut impl io::Read,
     ) -> Result<Self> {
         trace!("BlockStates::decode");
@@ -254,9 +263,16 @@ impl BlockStates {
             longs.push(data.read_u64::<BigEndian>()?);
         }
 
-        // TODO: read actual block states.
+        let packed_vec_length = BLOCKS_PER_SECTION;
+        let packed_vec =
+            PackedIntVec::from_parts(longs, packed_vec_length, bits_per_block).unwrap();
 
-        Ok(Default::default())
+        let block_states: Vec<BlockState> = packed_vec
+            .iter()
+            .map(|block_state_id| palette.id_to_block_state(block_state_id).unwrap())
+            .collect();
+
+        Ok(Self(block_states.try_into().unwrap()))
     }
 }
 
