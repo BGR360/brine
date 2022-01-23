@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Cursor, Read, Write},
+    io::{self, Cursor, Write},
     ops::Deref,
 };
 
@@ -14,6 +14,7 @@ use crate::codec::{
     UnknownPacket, HANDSHAKE_LOGIN_NEXT, HANDSHAKE_STATUS_NEXT,
 };
 
+/// Packet representation used by this implementation of the protocol codec.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
     Known(packet::Packet),
@@ -48,93 +49,125 @@ impl From<State> for MinecraftProtocolState {
     }
 }
 
+/// Implementation of the Minecraft protocol using the [`steven_protocol`] crate.
+///
+/// [`steven_protocol`]: <https://github.com/iceiix/stevenarella/tree/master/protocol>
 #[derive(Debug)]
-pub struct MinecraftCodec {
-    state: MinecraftProtocolState,
-    protocol_version: i32,
-    direction: Direction,
-}
+pub struct MinecraftCodec;
 
 pub type ProtocolCodec = MinecraftClientCodec<MinecraftCodec>;
 
 impl MinecraftCodec {
-    pub fn new(state: MinecraftProtocolState, protocol_version: i32, direction: Direction) -> Self {
-        Self {
-            state,
-            protocol_version,
-            direction,
-        }
-    }
-
-    pub fn decode_packet(&self, buf: impl AsRef<[u8]>) -> Result<(usize, Packet), Error> {
+    pub fn decode_packet(
+        protocol_version: i32,
+        protocol_state: MinecraftProtocolState,
+        direction: Direction,
+        buf: impl AsRef<[u8]>,
+    ) -> Result<(usize, Packet), Error> {
         let buf = buf.as_ref();
+
+        // Use a cursor so we can track how many bytes we've read
+        // (VarInts have variable length).
         let mut cursor = Cursor::new(buf);
 
+        // First field is the packet length in bytes. Note that this number does
+        // **not** include the bytes used for the length field.
         let length = VarInt::read_from(&mut cursor)?.0 as usize;
+        // Take note of how many bytes the `length` field took up.
         let length_length = cursor.position() as usize;
 
-        let total_bytes_needed = length_length + length;
-        if buf.len() < total_bytes_needed {
+        // Ensure that there's enough data in the buffer to read the rest of the packet.
+        let total_packet_bytes = length_length + length;
+        if buf.len() < total_packet_bytes {
             return Err(Error::IOError(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Not enough bytes in buffer",
             )));
         }
 
-        let mut cursor = Cursor::new(&buf[length_length..total_bytes_needed]);
-
+        // Next field is the packet id.
         let id = VarInt::read_from(&mut cursor)?.0;
+        // Take note of how many bytes the `id` field took up.
+        let id_length = cursor.position() as usize - length_length;
 
-        let mut cursor_clone = cursor.clone();
+        // The rest of the packet is the actual packet data.
+        let data_start = cursor.position() as usize;
+        let data_length = length - id_length;
+        let data_slice = &buf[data_start..data_start + data_length];
+
+        let packet = Self::decode_packet_with_id(
+            protocol_version,
+            protocol_state,
+            direction,
+            id,
+            data_slice,
+        )?;
+
+        Ok((total_packet_bytes, packet))
+    }
+
+    /// Decodes packet contents from a byte slice. Byte slice must be exactly
+    /// the right size.
+    pub fn decode_packet_with_id(
+        protocol_version: i32,
+        protocol_state: MinecraftProtocolState,
+        direction: Direction,
+        packet_id: i32,
+        buf: impl AsRef<[u8]>,
+    ) -> Result<Packet, Error> {
+        let buf = buf.as_ref();
+
+        let mut cursor = Cursor::new(buf);
 
         let packet = packet::packet_by_id(
-            self.protocol_version,
-            self.state.into(),
-            self.direction,
-            id,
+            protocol_version,
+            protocol_state.into(),
+            direction,
+            packet_id,
             &mut cursor,
         )
         .map(|maybe_packet| match maybe_packet {
             Some(packet) => Packet::Known(packet),
-            None => {
-                let mut body = Vec::new();
-                cursor_clone.read_to_end(&mut body).unwrap();
-                Packet::Unknown(UnknownPacket {
-                    packet_id: id,
-                    body,
-                })
-            }
+            None => Packet::Unknown(UnknownPacket {
+                packet_id,
+                body: Vec::from(buf),
+            }),
         })?;
 
-        assert_eq!(cursor.position() as usize, length);
-        Ok((total_bytes_needed, packet))
+        // All of the data should have been read.
+        assert_eq!(cursor.position() as usize, buf.len());
+
+        Ok(packet)
     }
 
-    fn encode_packet(&self, packet: &Packet, mut buf: impl AsMut<[u8]>) -> Result<usize, Error> {
+    pub fn encode_packet(
+        protocol_version: i32,
+        packet: &Packet,
+        mut buf: impl AsMut<[u8]>,
+    ) -> Result<usize, Error> {
         match packet {
             Packet::Known(packet) => {
-                let buf = buf.as_mut();
+                let mut cursor = Cursor::new(buf.as_mut());
 
-                let payload = self.encode_packet_id_and_body(packet)?;
-                let length = payload.len();
-
-                let mut cursor = Cursor::new(buf);
+                let id_and_data = Self::encode_packet_id_and_data(protocol_version, packet)?;
+                let length = id_and_data.len();
 
                 VarInt(length as i32).write_to(&mut cursor)?;
                 let length_length = cursor.position() as usize;
 
-                let total_bytes_needed = length_length + length;
-                if cursor.get_ref().len() < total_bytes_needed {
+                let total_packet_bytes = length_length + length;
+                if cursor.get_ref().len() < total_packet_bytes {
                     return Err(Error::IOError(io::Error::new(
                         io::ErrorKind::UnexpectedEof,
                         "Not enough bytes in buffer",
                     )));
                 }
 
-                cursor.write_all(&payload[..])?;
+                cursor.write_all(&id_and_data[..])?;
 
-                assert_eq!(cursor.position() as usize, total_bytes_needed);
-                Ok(total_bytes_needed)
+                assert_eq!(cursor.position() as usize, total_packet_bytes);
+
+                Ok(total_packet_bytes)
             }
             Packet::Unknown(packet) => Err(Error::Err(format!(
                 "Attempted to encode unknown packet: {:?}",
@@ -143,15 +176,39 @@ impl MinecraftCodec {
         }
     }
 
-    fn encode_packet_id_and_body(&self, packet: &packet::Packet) -> Result<Vec<u8>, Error> {
+    pub fn encode_packet_id_and_data(
+        protocol_version: i32,
+        packet: &packet::Packet,
+    ) -> Result<Vec<u8>, Error> {
         let mut packet_id_and_body = Vec::new();
 
-        let id = VarInt(packet.packet_id(self.protocol_version));
+        let id = VarInt(packet.packet_id(protocol_version));
         id.write_to(&mut packet_id_and_body)?;
 
         packet.write(&mut packet_id_and_body)?;
 
         Ok(packet_id_and_body)
+    }
+
+    /// Extracts the server's protocol version from a StatusResponse packet.
+    /// See https://wiki.vg/Server_List_Ping#Response
+    pub fn get_server_protocol_version(
+        status_response: &packet::status::clientbound::StatusResponse,
+    ) -> Result<i32, String> {
+        use serde_json::Value;
+        let status: Value =
+            serde_json::from_str(&status_response.status).map_err(|e| e.to_string())?;
+
+        let invalid_status =
+            || format!("Malformed StatusResponse json: {}", &status_response.status);
+
+        let version = status.get("version").ok_or_else(invalid_status)?;
+        let protocol_version = version
+            .get("protocol")
+            .and_then(Value::as_i64)
+            .ok_or_else(invalid_status)?;
+
+        Ok(protocol_version as i32)
     }
 }
 
@@ -214,13 +271,14 @@ impl MinecraftClientCodec<MinecraftCodec> {
             // On a StatusResponse packet, set the protocol version to that of
             // the server.
             Packet::Known(packet::Packet::StatusResponse(status_response)) => {
-                let protocol_version = match self.get_server_protocol_version(&*status_response) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        log::error!("{}", e);
-                        return;
-                    }
-                };
+                let protocol_version =
+                    match MinecraftCodec::get_server_protocol_version(&*status_response) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return;
+                        }
+                    };
 
                 self.set_protocol_version(protocol_version);
             }
@@ -236,28 +294,6 @@ impl MinecraftClientCodec<MinecraftCodec> {
             _ => {}
         }
     }
-
-    /// Extracts the server's protocol version from a StatusResponse packet.
-    /// See https://wiki.vg/Server_List_Ping#Response
-    fn get_server_protocol_version(
-        &self,
-        status_response: &packet::status::clientbound::StatusResponse,
-    ) -> Result<i32, String> {
-        use serde_json::Value;
-        let status: Value =
-            serde_json::from_str(&status_response.status).map_err(|e| e.to_string())?;
-
-        let invalid_status =
-            || format!("Malformed StatusResponse json: {}", &status_response.status);
-
-        let version = status.get("version").ok_or_else(invalid_status)?;
-        let protocol_version = version
-            .get("protocol")
-            .and_then(Value::as_i64)
-            .ok_or_else(invalid_status)?;
-
-        Ok(protocol_version as i32)
-    }
 }
 
 impl Decode for MinecraftClientCodec<MinecraftCodec> {
@@ -265,12 +301,12 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Packet, Error>) {
-        let result = MinecraftCodec::new(
-            self.protocol_state(),
+        let result = MinecraftCodec::decode_packet(
             self.protocol_version(),
+            self.protocol_state(),
             Direction::Clientbound,
-        )
-        .decode_packet(buf);
+            buf,
+        );
 
         if let Ok((_, ref packet)) = result {
             self.react_to_packet(packet);
@@ -289,13 +325,7 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
 
         let len = buf.len();
 
-        MinecraftCodec::new(
-            self.protocol_state(),
-            self.protocol_version(),
-            Direction::Serverbound,
-        )
-        .encode_packet(packet, buf)
-        .into_encode_result(len)
+        MinecraftCodec::encode_packet(self.protocol_version(), packet, buf).into_encode_result(len)
     }
 }
 
