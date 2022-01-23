@@ -4,8 +4,8 @@ use std::{
 };
 
 use bevy_log as log;
-use steven_protocol::protocol::{self, PacketType, Serializable, State, VarInt};
-pub use steven_protocol::protocol::{packet, Direction, Error};
+use steven_protocol::protocol::{self, State, VarInt};
+pub use steven_protocol::protocol::{packet, Direction, Error, PacketType, Serializable};
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
@@ -149,7 +149,8 @@ impl MinecraftCodec {
             Packet::Known(packet) => {
                 let mut cursor = Cursor::new(buf.as_mut());
 
-                let id_and_data = Self::encode_packet_id_and_data(protocol_version, packet)?;
+                let mut id_and_data = Vec::new();
+                Self::encode_packet_id_and_data(protocol_version, packet, &mut id_and_data)?;
                 let length = id_and_data.len();
 
                 VarInt(length as i32).write_to(&mut cursor)?;
@@ -179,15 +180,16 @@ impl MinecraftCodec {
     pub fn encode_packet_id_and_data(
         protocol_version: i32,
         packet: &packet::Packet,
-    ) -> Result<Vec<u8>, Error> {
-        let mut packet_id_and_body = Vec::new();
-
+        buf: &mut impl Write,
+    ) -> Result<(), Error> {
         let id = VarInt(packet.packet_id(protocol_version));
-        id.write_to(&mut packet_id_and_body)?;
+        id.write_to(buf)?;
 
-        packet.write(&mut packet_id_and_body)?;
+        Self::encode_packet_data(packet, buf)
+    }
 
-        Ok(packet_id_and_body)
+    pub fn encode_packet_data(packet: &packet::Packet, buf: &mut impl Write) -> Result<(), Error> {
+        packet.write(buf)
     }
 
     /// Extracts the server's protocol version from a StatusResponse packet.

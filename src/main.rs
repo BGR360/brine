@@ -3,8 +3,6 @@ use bevy::{
     prelude::*,
 };
 
-mod chunk;
-
 const SERVER: &str = "localhost:25565";
 const USERNAME: &str = "bgr360";
 

@@ -18,7 +18,12 @@ members = [
 split-debuginfo = "unpacked"
 
 [dependencies]
-brine_proto = { path = "./crates/brine_proto" }
-brine_proto_backend = { path = "./crates/brine_proto_backend", features = ["steven_proto"] }
-
 bevy = { version = "0.6.0" }
+#block-mesh = "0.1"
+clap = { version = "3", features = ["derive"] }
+futures-lite = "1"
+
+brine_chunk = { path = "./crates/brine_chunk" }
+brine_net = { path = "./crates/brine_net" }
+brine_proto = { path = "./crates/brine_proto" }
+brine_proto_backend = { path = "./crates/brine_proto_backend" }
