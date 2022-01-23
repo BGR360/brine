@@ -2,10 +2,10 @@
 //! the backend.
 
 mod chunks;
-mod codec;
+pub mod codec;
 mod login;
 
-pub(crate) use codec::ProtocolCodec;
+pub use codec::ProtocolCodec;
 
 pub(crate) fn build(app: &mut bevy_app::App) {
     chunks::build(app);

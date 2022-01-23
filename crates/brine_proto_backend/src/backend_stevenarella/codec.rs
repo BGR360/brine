@@ -1,8 +1,11 @@
-use std::io::{self, Cursor, Read, Write};
+use std::{
+    io::{self, Cursor, Read, Write},
+    ops::Deref,
+};
 
 use bevy_log as log;
-use steven_protocol::protocol::{self, Direction, PacketType, Serializable, State, VarInt};
-pub(crate) use steven_protocol::protocol::{packet, Error};
+use steven_protocol::protocol::{self, PacketType, Serializable, State, VarInt};
+pub use steven_protocol::protocol::{packet, Direction, Error};
 
 use brine_net::{Decode, DecodeResult, Encode, EncodeResult};
 
@@ -55,11 +58,7 @@ pub struct MinecraftCodec {
 pub type ProtocolCodec = MinecraftClientCodec<MinecraftCodec>;
 
 impl MinecraftCodec {
-    pub(crate) fn new(
-        state: MinecraftProtocolState,
-        protocol_version: i32,
-        direction: Direction,
-    ) -> Self {
+    pub fn new(state: MinecraftProtocolState, protocol_version: i32, direction: Direction) -> Self {
         Self {
             state,
             protocol_version,
@@ -67,7 +66,7 @@ impl MinecraftCodec {
         }
     }
 
-    fn decode_packet(&self, buf: impl AsRef<[u8]>) -> Result<(usize, Packet), Error> {
+    pub fn decode_packet(&self, buf: impl AsRef<[u8]>) -> Result<(usize, Packet), Error> {
         let buf = buf.as_ref();
         let mut cursor = Cursor::new(buf);
 
@@ -186,14 +185,10 @@ impl IntoEncodeResult for Result<usize, Error> {
 }
 
 impl MinecraftClientCodec<MinecraftCodec> {
-    pub fn protocol_version(&self) -> i32 {
-        self.state.protocol_version()
-    }
-
     pub fn set_protocol_version(&self, protocol_version: i32) {
         log::debug!("Setting codec protocol version to {}", protocol_version);
         protocol::set_current_protocol_version(protocol_version);
-        self.state.set_protocol_version(protocol_version);
+        self.deref().set_protocol_version(protocol_version);
     }
 
     /// Makes any necessary adjustments to the codec state in response to
@@ -212,7 +207,7 @@ impl MinecraftClientCodec<MinecraftCodec> {
                     }
                 } {
                     log::debug!("Codec advancing to state {:?}", next_state);
-                    self.state.set_state(next_state);
+                    self.set_protocol_state(next_state);
                 }
             }
 
@@ -235,7 +230,7 @@ impl MinecraftClientCodec<MinecraftCodec> {
                 packet::Packet::LoginSuccess_String(_) | packet::Packet::LoginSuccess_UUID(_),
             ) => {
                 log::debug!("Codec advancing to state Play");
-                self.state.set_state(MinecraftProtocolState::Play);
+                self.set_protocol_state(MinecraftProtocolState::Play);
             }
 
             _ => {}
@@ -271,8 +266,8 @@ impl Decode for MinecraftClientCodec<MinecraftCodec> {
 
     fn decode(&mut self, buf: &mut [u8]) -> (usize, DecodeResult<Packet, Error>) {
         let result = MinecraftCodec::new(
-            self.state.state(),
-            self.state.protocol_version(),
+            self.protocol_state(),
+            self.protocol_version(),
             Direction::Clientbound,
         )
         .decode_packet(buf);
@@ -295,8 +290,8 @@ impl Encode for MinecraftClientCodec<MinecraftCodec> {
         let len = buf.len();
 
         MinecraftCodec::new(
-            self.state.state(),
-            self.state.protocol_version(),
+            self.protocol_state(),
+            self.protocol_version(),
             Direction::Serverbound,
         )
         .encode_packet(packet, buf)
