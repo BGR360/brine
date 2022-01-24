@@ -55,3 +55,9 @@ implemented from the get-go is amazingly helpful for bootstrapping this project.
 [steven]/[stevenarella]. What is sort of new is the attempt to abstract the
 logic of Minecraft into an API that greatly decouples the application logic from
 the implementation details of the backend.
+
+## License
+
+This project is distributed under the terms of the MIT license.
+
+Copyright Ben Reeves 2022
