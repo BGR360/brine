@@ -1,7 +1,7 @@
 //! Implementation of the Minecraft codec using stevenarella's protocol crate as
 //! the backend.
 
-mod chunks;
+pub mod chunks;
 pub mod codec;
 mod login;
 

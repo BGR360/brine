@@ -37,7 +37,7 @@ fn handle_chunk_data(
     }
 }
 
-fn get_chunk_from_packet(packet: &Packet) -> brine_chunk::Result<Option<Chunk>> {
+pub fn get_chunk_from_packet(packet: &Packet) -> brine_chunk::Result<Option<Chunk>> {
     if let Packet::Known(packet::Packet::ChunkData_HeightMap(chunk_data)) = packet {
         Ok(Some(Chunk::decode(
             chunk_data.chunk_x,
