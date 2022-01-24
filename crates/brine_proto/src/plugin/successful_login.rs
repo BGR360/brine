@@ -12,11 +12,11 @@ use bevy_log as log;
 ///
 /// The plugin acts on the following events:
 ///
-/// * [`ServerboundEvent::Login`]
+/// * [`Login`]
 ///
 /// The plugin sends the following events:
 ///
-/// * [`ClientboundEvent::LoginSuccess`]
+/// * [`LoginSuccess`]
 ///
 /// # Resources
 ///

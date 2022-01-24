@@ -11,8 +11,8 @@ use crate::event;
 ///
 /// The plugin registers the following event types:
 ///
-/// * [`ClientboundEvent`]
-/// * [`ServerboundEvent`]
+/// * [`event::clientbound::*`][event::clientbound]
+/// * [`event::serverbound::*`][event::serverbound]
 ///
 /// The plugin does not react to any events.
 ///

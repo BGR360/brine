@@ -11,7 +11,7 @@
 pub use uuid::Uuid;
 
 pub mod serverbound {
-    //! Definitions for all variants of [`ServerboundEvent`][super::ServerboundEvent].
+    //! Definitions for all serverbound events.
 
     #[allow(unused)]
     use super::clientbound;
@@ -39,7 +39,7 @@ pub mod serverbound {
 }
 
 pub mod clientbound {
-    //! Definitions for all variants of [`ClientboundEvent`][super::ClientboundEvent].
+    //! Definitions for all clientbound events.
 
     #[allow(unused)]
     use super::serverbound;
@@ -72,6 +72,7 @@ pub mod clientbound {
         pub reason: String,
     }
 
+    /// Contains data relating to a 16x256x16 chunk of the Minecraft world.
     #[derive(Debug, Clone, PartialEq)]
     pub struct ChunkData {
         pub chunk_data: brine_chunk::Chunk,
