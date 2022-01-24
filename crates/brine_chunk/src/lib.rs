@@ -165,6 +165,28 @@ pub enum ChunkData {
     },
 }
 
+impl ChunkData {
+    /// Returns whether or not this contains the full data for a chunk or if
+    /// it's just a delta.
+    pub fn is_full(&self) -> bool {
+        matches!(self, Self::Full { .. })
+    }
+
+    pub fn sections(&self) -> &[ChunkSection] {
+        match self {
+            ChunkData::Full { sections, .. } => sections,
+            ChunkData::Delta { sections } => sections,
+        }
+    }
+
+    pub fn sections_mut(&mut self) -> &mut [ChunkSection] {
+        match self {
+            ChunkData::Full { sections, .. } => sections,
+            ChunkData::Delta { sections } => sections,
+        }
+    }
+}
+
 impl Default for ChunkData {
     fn default() -> Self {
         Self::Delta {
@@ -247,6 +269,11 @@ impl ChunkSection {
 pub struct BlockStates(pub [BlockState; BLOCKS_PER_SECTION]);
 
 impl BlockStates {
+    #[inline]
+    pub fn iter(&self) -> BlockIter<'_> {
+        BlockIter::new(self)
+    }
+
     /// See <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Compacted_data_array>.
     pub fn decode(
         bits_per_block: u8,
@@ -285,6 +312,55 @@ impl Default for BlockStates {
 impl fmt::Debug for BlockStates {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("BlockStates").field(&"...").finish()
+    }
+}
+
+/// Iterator through a [`ChunkSection`]'s block states.
+pub struct BlockIter<'a> {
+    block_states: &'a BlockStates,
+    cur_index: usize,
+}
+
+impl<'a> BlockIter<'a> {
+    fn new(block_states: &'a BlockStates) -> Self {
+        Self {
+            block_states,
+            cur_index: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for BlockIter<'a> {
+    type Item = (u8, u8, u8, BlockState);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cur_index >= SECTION_HEIGHT * SECTION_WIDTH * SECTION_WIDTH {
+            return None;
+        }
+
+        // Y-Z-X-major order, 4 bits per axis.
+        const Y_MASK: usize = 0b1111_0000_0000;
+        const Z_MASK: usize = 0b0000_1111_0000;
+        const X_MASK: usize = 0b0000_0000_1111;
+        const Y_SHIFT: usize = 8;
+        const Z_SHIFT: usize = 4;
+        const X_SHIFT: usize = 0;
+
+        let x = (self.cur_index & X_MASK) >> X_SHIFT;
+        let y = (self.cur_index & Y_MASK) >> Y_SHIFT;
+        let z = (self.cur_index & Z_MASK) >> Z_SHIFT;
+
+        let next = (
+            x as u8,
+            y as u8,
+            z as u8,
+            self.block_states.0[self.cur_index],
+        );
+
+        self.cur_index += 1;
+
+        Some(next)
     }
 }
 
