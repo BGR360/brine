@@ -26,7 +26,7 @@ where
     pub(crate) network_event_sender: Sender<NetworkEvent<Codec>>,
 
     /// Used by the plugin to forward [`NetworkEvent`]s through an
-    /// [`EventWriter`][bevy::ecs::event::EventWriter].
+    /// [`EventWriter`][bevy_ecs::event::EventWriter].
     pub(crate) network_event_receiver: Receiver<NetworkEvent<Codec>>,
 
     /// Used by the [`CodecWriter`][crate::system_param::CodecWriter] to produce

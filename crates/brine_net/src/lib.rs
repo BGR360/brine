@@ -1,7 +1,7 @@
 //! Customizable two-way TCP networking for Bevy projects.
 //!
 //! This crate does not depend on any additional async runtime like Tokio; it
-//! uses the same runtime provided by [`bevy::tasks`].
+//! uses the same runtime provided by [`bevy_tasks`].
 //!
 //! It is based heavily on the [`async_codec`] crate.
 //!

@@ -59,7 +59,7 @@ pub type CodecWriter<'w, 's, Codec> =
 ///
 /// The plugin expects no resources to exist.
 ///
-/// [`EventReader`]: bevy::ecs::event::EventReader
+/// [`EventReader`]: bevy_ecs::event::EventReader
 pub struct NetworkPlugin<Codec> {
     _phantom: PhantomData<Codec>,
 }
