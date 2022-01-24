@@ -16,17 +16,16 @@ use crate::backend::{self, ProtocolCodec};
 ///
 /// The plugin acts on the following events:
 ///
-/// * [`brine_proto::ServerboundEvent`]
+/// * [`brine_proto::event::serverbound::*`][brine_proto::event::serverbound]
 ///
 /// The plugin sends the following events:
 ///
-/// * [`brine_proto::ClientboundEvent`]
+/// * [`brine_proto::event::clientbound::*`][brine_proto::event::clientbound]
 ///
 /// # Resources
 ///
-/// The plugin does not register any resources.
-///
-/// The plugin does not expect any resources to exist.
+/// The plugin registers a [`NetworkPlugin`] which provides things. See its
+/// documentation.
 pub struct ProtocolBackendPlugin;
 
 impl Plugin for ProtocolBackendPlugin {

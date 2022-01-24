@@ -193,7 +193,7 @@ impl MinecraftCodec {
     }
 
     /// Extracts the server's protocol version from a StatusResponse packet.
-    /// See https://wiki.vg/Server_List_Ping#Response
+    /// See <https://wiki.vg/Server_List_Ping#Response>
     pub fn get_server_protocol_version(
         status_response: &packet::status::clientbound::StatusResponse,
     ) -> Result<i32, String> {
