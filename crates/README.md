@@ -45,17 +45,20 @@ system. Start with the
 
 ```
               ┌───────┐                      
-              │ brine │                      
-              └───────┘                      
-                  │                          
-                  │                          
-                  │                          
-                  ▼                          
+              │ brine │──────────────┐       
+              └───────┘              │       
+                  │                  │       
+                  │                  ▼       
+                  │           ┌─────────────┐
+                  │           │ brine_voxel │
+                  │           └─────────────┘
+                  │                  │       
+                  │                  │       
+                  ▼                  ▼       
             ┌───────────┐     ┌─────────────┐
             │brine_proto│────▶│ brine_chunk │
             └───────────┘     └─────────────┘
                   ▲                  ▲       
-                  │                  │       
 ┌───────────┐     │                  │       
 │ brine_net │     │                  │       
 └───────────┘     │                  │       
@@ -69,20 +72,24 @@ system. Start with the
 
 ### [`brine_chunk`](brine_chunk/)
 
-Logic for decoding chunk data from Minecraft Java Edition packets.
+Logic for decoding chunk data from Minecraft packets.
 
 No Bevy dependencies.
 
 ### [`brine_net`](brine_net/)
 
-A library for easy TCP communication between a client and server.
+A library for implementing client-server protocols over TCP.
 
 ### [`brine_proto`](brine_proto/)
 
-Defines a high-level abstraction of the Minecraft game logic.
+A high-level abstraction of the Minecraft game logic.
 
 ### [`brine_proto_backend`](brine_proto_backend/)
 
 A backend implementation for Minecraft Java Edition. Currently powered by the
 `steven_protocol` crate from the
 [`stevenarella`](https://github.com/iceiix/stevenarella) project.
+
+### [`brine_voxel`](brine_voxel/)
+
+A library for rendering chunked voxel worlds.

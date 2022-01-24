@@ -2,6 +2,7 @@
 name = "brine"
 version = "0.0.1"
 edition = "2021"
+default-run = "brine"
 
 [workspace]
 resolver = "2"
@@ -16,14 +17,19 @@ members = [
 
 [profile.dev]
 split-debuginfo = "unpacked"
+opt-level = 1
 
 [dependencies]
 bevy = { version = "0.6.0" }
-#block-mesh = "0.1"
+bevy_fly_camera = "0.8"
+bevy-inspector-egui = "0.7"
 clap = { version = "3", features = ["derive"] }
 futures-lite = "1"
+steven_protocol = { path = "./third_party/stevenarella/protocol" }
+thiserror = "1"
 
 brine_chunk = { path = "./crates/brine_chunk" }
 brine_net = { path = "./crates/brine_net" }
 brine_proto = { path = "./crates/brine_proto" }
 brine_proto_backend = { path = "./crates/brine_proto_backend" }
+brine_voxel = { path = "./crates/brine_voxel" }
