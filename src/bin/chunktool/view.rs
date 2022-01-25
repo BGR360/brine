@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, fmt, fs, io, path::PathBuf};
+use std::{f32::consts::PI, path::PathBuf};
 
 use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
@@ -7,18 +7,15 @@ use bevy::{
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
 
-use brine_chunk::Error as ChunkError;
 use brine_proto::{event, ProtocolPlugin};
-use brine_proto_backend::{
-    backend_stevenarella::{
-        chunks::get_chunk_from_packet,
-        codec::{Direction, Error as PacketError, MinecraftCodec},
-    },
-    codec::MinecraftProtocolState,
-};
 use brine_voxel::chunk_builder::{
     component::{BuiltChunk, BuiltChunkSection, Chunk},
     ChunkBuilderPlugin, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
+};
+
+use brine::{
+    chunk::{load_chunk, Result},
+    error::log_error,
 };
 
 /// Loads a chunk from a file and views it in 3D.
@@ -27,23 +24,6 @@ pub struct Args {
     /// Path to a chunk data file to load.
     file: PathBuf,
 }
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("the loaded file does not contain valid chunk data")]
-    NotAChunk,
-
-    #[error(transparent)]
-    Packet(#[from] PacketError),
-
-    #[error(transparent)]
-    Chunk(#[from] ChunkError),
-
-    #[error(transparent)]
-    Io(#[from] io::Error),
-}
-
-pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn main(args: Args) {
     println!("{}", args.file.to_string_lossy());
@@ -62,7 +42,7 @@ pub fn main(args: Args) {
         .add_plugin(ChunkBuilderPlugin::<NaiveBlocksChunkBuilder>::shared())
         .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::shared())
         //.add_plugin(ChunkViewerPlugin)
-        .add_startup_system(load_chunk.chain(handle_error))
+        .add_startup_system(load_chunk_system.chain(log_error))
         .add_startup_system(setup_point_light_and_camera)
         //.add_system(add_material)
         .add_system(put_naive_block_chunk_on_left)
@@ -76,20 +56,11 @@ pub fn main(args: Args) {
 #[derive(Component)]
 struct LoadChunk(PathBuf);
 
-fn handle_error<E: fmt::Display>(In(result): In<Result<(), E>>) {
-    if let Err(e) = result {
-        error!("{}", e);
-    }
-}
-
-fn load_chunk(
+fn load_chunk_system(
     args: Res<Args>,
     mut chunk_events: EventWriter<event::clientbound::ChunkData>,
 ) -> Result<()> {
-    let path = &args.file;
-    let file_bytes = fs::read(path)?;
-
-    let chunk = chunk_from_bytes(&file_bytes)?;
+    let chunk = load_chunk(&args.file)?;
     debug!("loaded chunk: {:#?}", chunk);
 
     let sections = chunk.data.sections();
@@ -108,25 +79,6 @@ fn load_chunk(
     });
 
     Ok(())
-}
-
-fn chunk_from_bytes(mut reader: &[u8]) -> Result<brine_chunk::Chunk> {
-    const CHUNK_DATA_PACKET_ID: i32 = 0x21;
-
-    let packet = MinecraftCodec::decode_packet_with_id(
-        498,
-        MinecraftProtocolState::Play,
-        Direction::Clientbound,
-        CHUNK_DATA_PACKET_ID,
-        &mut reader,
-    )?;
-
-    let chunk = get_chunk_from_packet(&packet)?;
-
-    match chunk {
-        Some(chunk) => Ok(chunk),
-        None => Err(Error::NotAChunk),
-    }
 }
 
 fn setup_point_light_and_camera(

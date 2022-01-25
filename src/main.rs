@@ -1,5 +1,7 @@
 //! The Brine Minecraft client entrypoint.
 
+use std::path::PathBuf;
+
 use bevy::{
     log::{Level, LogSettings},
     pbr::wireframe::{WireframeConfig, WireframePlugin},
@@ -8,32 +10,65 @@ use bevy::{
 };
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use bevy_inspector_egui::prelude::*;
+use clap::Parser;
 
-use brine_proto::ProtocolPlugin;
+use brine_proto::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};
 use brine_proto_backend::ProtocolBackendPlugin;
 use brine_voxel::chunk_builder::{ChunkBuilderPlugin, VisibleFacesChunkBuilder};
 
-use brine::{login::LoginPlugin, DEFAULT_LOG_FILTER};
+use brine::{login::LoginPlugin, server::ServeChunksFromDirectoryPlugin, DEFAULT_LOG_FILTER};
 
 const SERVER: &str = "localhost:25565";
 const USERNAME: &str = "user";
 
+/// Brine Minecraft Client
+#[derive(Parser)]
+struct Args {
+    /// Run with additional debug utilities (e.g., egui inspector).
+    #[clap(short, long)]
+    debug: bool,
+
+    /// Run with a fake server that serves chunks from a directory of chunk files.
+    #[clap(name = "chunks", long, value_name = "CHUNK_DIR")]
+    chunk_dir: Option<PathBuf>,
+}
+
 fn main() {
-    App::new()
-        // Default plugins.
-        .insert_resource(LogSettings {
-            level: Level::INFO,
-            filter: String::from(DEFAULT_LOG_FILTER),
-        })
-        .add_plugins(DefaultPlugins)
-        // Debugging, diagnostics, and utility plugins.
-        // .add_plugin(WorldInspectorPlugin::new())
-        // Brine-specific plugins.
-        .add_plugin(ProtocolPlugin)
-        .add_plugin(ProtocolBackendPlugin)
-        .add_plugin(LoginPlugin::new(SERVER.to_string(), USERNAME.to_string()))
-        .add_plugin(MinecraftWorldViewerPlugin)
-        .run();
+    let args = Args::parse();
+
+    let mut app = App::new();
+
+    // Default plugins.
+
+    app.insert_resource(LogSettings {
+        level: Level::INFO,
+        filter: String::from(DEFAULT_LOG_FILTER),
+    });
+    app.add_plugins(DefaultPlugins);
+
+    // Brine-specific plugins.
+
+    app.add_plugin(ProtocolPlugin);
+
+    if let Some(chunk_dir) = args.chunk_dir {
+        app.add_plugin(AlwaysSuccessfulLoginPlugin);
+        app.add_plugin(ServeChunksFromDirectoryPlugin::new(chunk_dir));
+    } else {
+        app.add_plugin(ProtocolBackendPlugin);
+        app.add_plugin(
+            LoginPlugin::new(SERVER.to_string(), USERNAME.to_string()).exit_on_disconnect(),
+        );
+    }
+
+    app.add_plugin(MinecraftWorldViewerPlugin);
+
+    // Debugging, diagnostics, and utility plugins.
+
+    if args.debug {
+        app.add_plugin(WorldInspectorPlugin::new());
+    }
+
+    app.run();
 }
 
 #[derive(Default)]
