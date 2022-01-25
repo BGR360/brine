@@ -20,12 +20,12 @@ split-debuginfo = "unpacked"
 opt-level = 1
 
 [dependencies]
-bevy = { version = "0.6.0" }
+bevy = { version = "0.6.0", features = ["dynamic"] }
 bevy_fly_camera = "0.8"
 bevy-inspector-egui = "0.7"
 clap = { version = "3", features = ["derive"] }
 futures-lite = "1"
-steven_protocol = { path = "./third_party/stevenarella/protocol" }
+steven_protocol = { path = "./third_party/stevenarella/protocol", default-features = false }
 thiserror = "1"
 
 brine_chunk = { path = "./crates/brine_chunk" }

@@ -10,4 +10,4 @@ thiserror = "1"
 tracing = "0.1"
 
 [dev-dependencies]
-steven_protocol = { path = '../../third_party/stevenarella/protocol/' }
+steven_protocol = { path = "../../third_party/stevenarella/protocol/", default-features = false }

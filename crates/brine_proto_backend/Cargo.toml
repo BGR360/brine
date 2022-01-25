@@ -13,7 +13,7 @@ serde_json = "1"
 brine_chunk = { path = "../brine_chunk" }
 brine_net = { path = "../brine_net" }
 brine_proto = { path = "../brine_proto" }
-steven_protocol = { path = "../../third_party/stevenarella/protocol" }
+steven_protocol = { path = "../../third_party/stevenarella/protocol", default-features = false }
 
 [dev-dependencies]
 assert_matches = "1"
