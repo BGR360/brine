@@ -35,16 +35,15 @@ pub fn main(args: Args) {
             ..Default::default()
         })
         .insert_resource(Msaa { samples: 4 })
+        .insert_resource(WireframeConfig { global: true })
+        .insert_resource(args)
         .add_plugin(WireframePlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(ProtocolPlugin)
-        .insert_resource(args)
         .add_plugin(ChunkBuilderPlugin::<NaiveBlocksChunkBuilder>::shared())
         .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::shared())
-        //.add_plugin(ChunkViewerPlugin)
         .add_startup_system(load_chunk_system.chain(log_error))
-        .add_startup_system(setup_point_light_and_camera)
-        //.add_system(add_material)
+        .add_startup_system(set_up_camera)
         .add_system(put_naive_block_chunk_on_left)
         .add_system(put_visible_faces_chunk_on_right)
         .add_system(center_section_at_bottom_of_chunk::<NaiveBlocksChunkBuilder>)
@@ -81,21 +80,7 @@ fn load_chunk_system(
     Ok(())
 }
 
-fn setup_point_light_and_camera(
-    mut commands: Commands,
-    mut wireframe_config: ResMut<WireframeConfig>,
-) {
-    wireframe_config.global = true;
-
-    commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_translation(Vec3::new(25.0, 25.0, 25.0)),
-        point_light: PointLight {
-            range: 200.0,
-            intensity: 8000.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    });
+fn set_up_camera(mut commands: Commands) {
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 8.0, 38.0))
             .looking_at(Vec3::ZERO, Vec3::Y),
@@ -103,41 +88,31 @@ fn setup_point_light_and_camera(
     });
 }
 
-fn _add_material(
-    mut material: Local<Option<Handle<StandardMaterial>>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    query: Query<Entity, Added<Handle<Mesh>>>,
-    mut commands: Commands,
-) {
-    if material.is_none() {
-        let mut new_mat = StandardMaterial::from(Color::rgb(0.0, 0.0, 0.0));
-        new_mat.perceptual_roughness = 0.9;
-
-        let handle = materials.add(new_mat);
-        *material = Some(handle);
-    }
-
-    for entity in query.iter() {
-        debug!("Adding material");
-        commands.entity(entity).insert(material.clone().unwrap());
-    }
-}
-
 fn put_naive_block_chunk_on_left(
-    mut query: Query<&mut Transform, Added<BuiltChunk<NaiveBlocksChunkBuilder>>>,
+    query: Query<(Entity, &mut Transform), Added<BuiltChunk<NaiveBlocksChunkBuilder>>>,
+    commands: Commands,
 ) {
-    for mut transform in query.iter_mut() {
-        transform.translation = Vec3::X * -12.0;
-        transform.rotate(Quat::from_rotation_y(PI / 4.0));
-    }
+    move_and_name(query, commands, Vec3::X * -12.0);
 }
 
 fn put_visible_faces_chunk_on_right(
-    mut query: Query<&mut Transform, Added<BuiltChunk<VisibleFacesChunkBuilder>>>,
+    query: Query<(Entity, &mut Transform), Added<BuiltChunk<VisibleFacesChunkBuilder>>>,
+    commands: Commands,
 ) {
-    for mut transform in query.iter_mut() {
-        transform.translation = Vec3::X * 12.0;
+    move_and_name(query, commands, Vec3::X * 12.0);
+}
+
+fn move_and_name<T: Send + Sync + 'static>(
+    mut query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
+    mut commands: Commands,
+    position: Vec3,
+) {
+    for (entity, mut transform) in query.iter_mut() {
+        transform.translation = position;
         transform.rotate(Quat::from_rotation_y(PI / 4.0));
+
+        let name = std::any::type_name::<T>();
+        commands.entity(entity).insert(Name::new(name));
     }
 }
 
@@ -146,7 +121,6 @@ fn center_section_at_bottom_of_chunk<T: Send + Sync + 'static>(
 ) {
     for mut transform in query.iter_mut() {
         transform.translation = Vec3::new(-8.0, -8.0, -8.0);
-        //transform.translation.y = 0.0;
     }
 }
 
