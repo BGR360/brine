@@ -141,8 +141,8 @@ where
     }
 
     fn builder_result_add_to_world(
-        mut built_chunks: Query<(Entity, &mut ChunkBuilderTask<T>)>,
         mut meshes: ResMut<Assets<Mesh>>,
+        mut built_chunks: Query<(Entity, &mut ChunkBuilderTask<T>)>,
         mut commands: Commands,
     ) {
         for (task_entity, mut task) in built_chunks.iter_mut() {

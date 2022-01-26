@@ -4,10 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     prelude::*,
-    render::{
-        mesh::{Indices, VertexAttributeValues},
-        render_resource::PrimitiveTopology,
-    },
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use block_mesh::{
     ndshape::{ConstShape3u32, Shape},
@@ -54,6 +51,7 @@ where
                         .with_children(|parent| {
                             parent.spawn().insert_bundle(PbrBundle {
                                 mesh: meshes.add(section.mesh),
+                                // material: material.clone(),
                                 // Mesh needs to be offset by [-1, -1, -1] to be
                                 // properly aligned.
                                 transform: Transform::from_translation(Vec3::new(-1.0, -1.0, -1.0)),
@@ -90,14 +88,14 @@ impl VisibleFacesChunkBuilder {
     }
 
     pub fn build_chunk_section(chunk_section: &ChunkSection) -> SectionMesh {
-        BlockMeshBuilder::build_with(chunk_section, |params| {
+        BlockMeshBuilder::new().build_with(chunk_section, |builder| {
             let mut buffer = UnitQuadBuffer::new();
             block_mesh::visible_block_faces(
-                params.voxels,
-                params.shape,
-                params.min,
-                params.max,
-                params.faces,
+                &builder.voxels[..],
+                &builder.shape,
+                builder.min,
+                builder.max,
+                &builder.faces,
                 &mut buffer,
             );
             BlockMeshOutput::VisibleFaces(buffer)
@@ -137,14 +135,14 @@ impl GreedyQuadsChunkBuilder {
     }
 
     pub fn build_chunk_section(chunk_section: &ChunkSection) -> SectionMesh {
-        BlockMeshBuilder::build_with(chunk_section, |params| {
-            let mut buffer = GreedyQuadsBuffer::new(params.voxels.len());
+        BlockMeshBuilder::new().build_with(chunk_section, |builder| {
+            let mut buffer = GreedyQuadsBuffer::new(builder.voxels.len());
             block_mesh::greedy_quads(
-                params.voxels,
-                params.shape,
-                params.min,
-                params.max,
-                params.faces,
+                &builder.voxels[..],
+                &builder.shape,
+                builder.min,
+                builder.max,
+                &builder.faces,
                 &mut buffer,
             );
             BlockMeshOutput::GreedyQuads(buffer)
@@ -190,39 +188,41 @@ impl MergeVoxel for BlockState {
 const SHAPE_SIDE: u32 = (SECTION_WIDTH as u32) + 2;
 type ChunkShape = ConstShape3u32<SHAPE_SIDE, SHAPE_SIDE, SHAPE_SIDE>;
 
-struct BlockMeshBuilderParams<'a> {
-    voxels: &'a [BlockState],
-    shape: &'a ChunkShape,
+struct BlockMeshBuilder {
+    voxels: [BlockState; Self::BUFFER_SIZE],
+    shape: ChunkShape,
     min: [u32; 3],
     max: [u32; 3],
-    faces: &'a [OrientedBlockFace; 6],
+    faces: [OrientedBlockFace; 6],
 }
 
-struct BlockMeshBuilder;
-
 impl BlockMeshBuilder {
-    fn build_with<F>(chunk_section: &ChunkSection, func: F) -> SectionMesh
-    where
-        F: FnOnce(BlockMeshBuilderParams) -> BlockMeshOutput,
-    {
-        let shape = ChunkShape {};
-        let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+    const BUFFER_SIZE: usize = (SHAPE_SIDE * SHAPE_SIDE * SHAPE_SIDE) as usize;
 
-        let mut block_states = [BlockState::EMPTY; (SHAPE_SIDE * SHAPE_SIDE * SHAPE_SIDE) as usize];
-        for (x, y, z, block_state) in chunk_section.block_states.iter() {
-            let index = shape.linearize([x as u32 + 1, y as u32 + 1, z as u32 + 1]);
-            block_states[index as usize] = BlockState(block_state);
-        }
-
-        let output = func(BlockMeshBuilderParams {
-            voxels: &block_states[..],
-            shape: &shape,
+    fn new() -> Self {
+        Self {
+            voxels: [BlockState::EMPTY; Self::BUFFER_SIZE],
+            shape: ChunkShape {},
             min: [0; 3],
             max: [SHAPE_SIDE - 1; 3],
-            faces: &faces,
-        });
+            faces: RIGHT_HANDED_Y_UP_CONFIG.faces,
+        }
+    }
 
-        let render_mesh = Self::generate_mesh(&faces, output);
+    fn build_with<F>(&mut self, chunk_section: &ChunkSection, func: F) -> SectionMesh
+    where
+        F: FnOnce(&BlockMeshBuilder) -> BlockMeshOutput,
+    {
+        for (x, y, z, block_state) in chunk_section.block_states.iter() {
+            let index = self
+                .shape
+                .linearize([x as u32 + 1, y as u32 + 1, z as u32 + 1]);
+            self.voxels[index as usize] = BlockState(block_state);
+        }
+
+        let output = func(self);
+
+        let render_mesh = self.generate_mesh(output);
 
         debug!("built chunk");
         trace!(
@@ -236,32 +236,49 @@ impl BlockMeshBuilder {
         }
     }
 
-    fn generate_mesh(faces: &[OrientedBlockFace; 6], output: BlockMeshOutput) -> Mesh {
+    fn generate_mesh(&self, output: BlockMeshOutput) -> Mesh {
         let num_indices = output.num_quads() * 6;
         let num_vertices = output.num_quads() * 4;
         let mut indices = Vec::with_capacity(num_indices);
         let mut positions = Vec::with_capacity(num_vertices);
         let mut normals = Vec::with_capacity(num_vertices);
+        let mut tex_coords = Vec::with_capacity(num_vertices);
 
-        output.for_each_quad_and_face(faces, |quad, face| {
+        output.for_each_quad_and_face(&self.faces, |quad, face| {
             indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
             positions.extend_from_slice(&face.quad_mesh_positions(&quad, 1.0));
             normals.extend_from_slice(&face.quad_mesh_normals());
+
+            // Get tex coords.
+            let block_index = quad.minimum;
+            let block_state = self.voxels[self.shape.linearize(block_index) as usize];
+            let coords = self.get_tex_coords(&quad, face, block_state);
+            tex_coords.extend_from_slice(&coords);
         });
 
         let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        render_mesh.set_attribute(
-            "Vertex_Position",
-            VertexAttributeValues::Float32x3(positions),
-        );
-        render_mesh.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(normals));
-        render_mesh.set_attribute(
-            "Vertex_Uv",
-            VertexAttributeValues::Float32x2(vec![[0.0; 2]; num_vertices]),
-        );
+        render_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        render_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        render_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
         render_mesh.set_indices(Some(Indices::U32(indices)));
 
         render_mesh
+    }
+
+    fn get_tex_coords(
+        &self,
+        quad: &UnorientedQuad,
+        face: &OrientedBlockFace,
+        block_state: BlockState,
+    ) -> [[f32; 2]; 4] {
+        let tex_coords = face.tex_coords(RIGHT_HANDED_Y_UP_CONFIG.u_flip_face, true, quad);
+
+        let index = block_state.0 .0 as usize % 256;
+
+        let u0 = index / 16;
+        let v0 = index % 16;
+
+        tex_coords.map(|[u, v]| [(u + u0 as f32) / 16.0, (v + v0 as f32) / 16.0])
     }
 }
 

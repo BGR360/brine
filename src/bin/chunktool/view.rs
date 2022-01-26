@@ -174,6 +174,7 @@ where
         app.add_plugin(ChunkBuilderPlugin::<T>::shared());
         app.add_system(Self::center_section_at_bottom_of_chunk);
         app.add_system(Self::rename_chunks);
+        app.add_system(Self::add_material);
 
         let position = self.position;
         app.add_system(move |query: Query<&mut Transform, Added<BuiltChunk<T>>>| {
@@ -223,6 +224,23 @@ where
     ) {
         for mut transform in query.iter_mut() {
             transform.translation = Vec3::new(-8.0, -8.0, -8.0);
+        }
+    }
+
+    fn add_material(
+        assets: Res<AssetServer>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        query: Query<Entity, Added<Handle<Mesh>>>,
+        mut commands: Commands,
+    ) {
+        let texture: Handle<Image> = assets.load("minecraft-texturesheet.png");
+        let material = materials.add(StandardMaterial {
+            base_color_texture: Some(texture),
+            unlit: true,
+            ..Default::default()
+        });
+        for entity in query.iter() {
+            commands.entity(entity).insert(material.clone());
         }
     }
 
