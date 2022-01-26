@@ -10,13 +10,20 @@ use bevy_transform::prelude::*;
 use brine_chunk::{BlockState, Chunk, ChunkSection};
 
 use super::{
-    component::{BuiltChunk, BuiltChunkSection},
+    component::{BuiltChunkBundle, BuiltChunkSectionBundle},
     AddToWorld, ChunkBuilder,
 };
 
 pub struct ChunkBlocks {
+    chunk_x: i32,
+    chunk_z: i32,
     block_mesh: Mesh,
     sections: Vec<SectionBlocks>,
+}
+
+pub struct SectionBlocks {
+    section_y: u8,
+    transforms: Vec<Transform>,
 }
 
 impl AddToWorld for ChunkBlocks {
@@ -25,20 +32,17 @@ impl AddToWorld for ChunkBlocks {
 
         commands
             .spawn()
-            .insert(Transform::default())
-            .insert(GlobalTransform::default())
-            .insert(BuiltChunk::<NaiveBlocksChunkBuilder>::default())
+            .insert_bundle(BuiltChunkBundle::<NaiveBlocksChunkBuilder>::new(
+                self.chunk_x,
+                self.chunk_z,
+            ))
             .with_children(|parent| {
                 for section in self.sections.into_iter() {
                     parent
                         .spawn()
-                        .insert(Transform::from_translation(Vec3::new(
-                            0.0,
-                            (section.section_y * 16) as f32,
-                            0.0,
-                        )))
-                        .insert(GlobalTransform::default())
-                        .insert(BuiltChunkSection::<NaiveBlocksChunkBuilder>::default())
+                        .insert_bundle(BuiltChunkSectionBundle::<NaiveBlocksChunkBuilder>::new(
+                            section.section_y,
+                        ))
                         .with_children(|parent| {
                             for transform in section.transforms.into_iter() {
                                 parent.spawn().insert_bundle(PbrBundle {
@@ -54,11 +58,6 @@ impl AddToWorld for ChunkBlocks {
     }
 }
 
-pub struct SectionBlocks {
-    section_y: u8,
-    transforms: Vec<Transform>,
-}
-
 /// A [`ChunkBuilder`] that just generates a cube mesh for each block.
 #[derive(Default)]
 pub struct NaiveBlocksChunkBuilder;
@@ -66,6 +65,8 @@ pub struct NaiveBlocksChunkBuilder;
 impl NaiveBlocksChunkBuilder {
     pub fn build_chunk(chunk: &Chunk) -> ChunkBlocks {
         ChunkBlocks {
+            chunk_x: chunk.chunk_x,
+            chunk_z: chunk.chunk_z,
             block_mesh: Mesh::from(shape::Cube { size: 1.0 }),
             sections: chunk
                 .data

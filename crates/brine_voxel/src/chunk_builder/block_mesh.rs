@@ -24,7 +24,7 @@ use brine_chunk::{Chunk, ChunkSection, SECTION_WIDTH};
 use crate::chunk_builder::AddToWorld;
 
 use super::{
-    component::{BuiltChunk, BuiltChunkSection},
+    component::{BuiltChunkBundle, BuiltChunkSectionBundle},
     ChunkBuilder,
 };
 
@@ -49,26 +49,20 @@ where
     fn add_to_world<'w, 's>(self, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Entity {
         commands
             .spawn()
-            .insert(Transform::from_translation(Vec3::new(
-                (self.chunk_x * 16) as f32,
-                0.0,
-                (self.chunk_z * 16) as f32,
-            )))
-            .insert(GlobalTransform::default())
-            .insert(BuiltChunk::<Builder>::default())
+            .insert_bundle(BuiltChunkBundle::<Builder>::new(self.chunk_x, self.chunk_z))
             .with_children(move |parent| {
                 for section in self.sections.into_iter() {
                     parent
                         .spawn()
-                        .insert(BuiltChunkSection::<Builder>::default())
-                        .insert_bundle(PbrBundle {
-                            mesh: meshes.add(section.mesh),
-                            transform: Transform::from_translation(Vec3::new(
-                                0.0,
-                                (section.section_y * 16) as f32,
-                                0.0,
-                            )),
-                            ..Default::default()
+                        .insert_bundle(BuiltChunkSectionBundle::<Builder>::new(section.section_y))
+                        .with_children(|parent| {
+                            parent.spawn().insert_bundle(PbrBundle {
+                                mesh: meshes.add(section.mesh),
+                                // Mesh needs to be offset by [-1, -1, -1] to be
+                                // properly aligned.
+                                transform: Transform::from_translation(Vec3::new(-1.0, -1.0, -1.0)),
+                                ..Default::default()
+                            });
                         });
                 }
             })
