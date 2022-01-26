@@ -2,6 +2,7 @@ use std::{any::Any, marker::PhantomData};
 
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
+use bevy_core::prelude::*;
 use bevy_ecs::{event::Events, prelude::*};
 use bevy_log::prelude::*;
 use bevy_render::prelude::*;
@@ -10,7 +11,7 @@ use futures_lite::future;
 
 use brine_proto::event;
 
-use super::component::Chunk;
+use super::component::{BuiltChunk, BuiltChunkSection, Chunk};
 
 use super::{AddToWorld, ChunkBuilder};
 
@@ -70,13 +71,19 @@ where
     <T as ChunkBuilder>::Output: Send + 'static,
 {
     fn build(&self, app: &mut App) {
-        if self.shared {
-            app.add_system(Self::builder_task_spawn_shared.label(System::BuilderTaskSpawn));
-        } else {
-            app.add_system(Self::builder_task_spawn_unique.label(System::BuilderTaskSpawn));
-        }
+        let mut systems = SystemSet::new();
 
-        app.add_system(Self::builder_result_add_to_world.label(System::BuilderResultAddToWorld));
+        systems = if self.shared {
+            systems.with_system(Self::builder_task_spawn_shared.label(System::BuilderTaskSpawn))
+        } else {
+            systems.with_system(Self::builder_task_spawn_unique.label(System::BuilderTaskSpawn))
+        };
+
+        systems = systems
+            .with_system(Self::builder_result_add_to_world.label(System::BuilderResultAddToWorld))
+            .with_system(Self::add_names);
+
+        app.add_system_set(systems);
     }
 }
 
@@ -96,7 +103,7 @@ where
             return;
         }
 
-        debug!("Chunk time!");
+        debug!("Received chunk, spawning task");
 
         let task: ChunkBuilderTask<T> = task_pool.spawn(async move {
             let built = T::default().build_chunk(&chunk);
@@ -151,6 +158,23 @@ where
                 // Task is complete, so remove task component from entity
                 commands.entity(task_entity).remove::<ChunkBuilderTask<T>>();
             }
+        }
+    }
+
+    fn add_names(
+        built_chunks: Query<(Entity, &BuiltChunk<T>), Added<BuiltChunk<T>>>,
+        built_sections: Query<(Entity, &BuiltChunkSection<T>), Added<BuiltChunkSection<T>>>,
+        mut commands: Commands,
+    ) {
+        for (entity, built_chunk) in built_chunks.iter() {
+            commands
+                .entity(entity)
+                .insert(Name::new(built_chunk.to_string()));
+        }
+        for (entity, built_section) in built_sections.iter() {
+            commands
+                .entity(entity)
+                .insert(Name::new(built_section.to_string()));
         }
     }
 }

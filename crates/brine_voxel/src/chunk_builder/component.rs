@@ -12,17 +12,40 @@ pub struct Chunk(pub brine_chunk::Chunk);
 ///
 /// Typically has one or more children with [`BuiltChunkSection`] components.
 #[derive(Component)]
-pub struct BuiltChunk<T>(PhantomData<T>);
+pub struct BuiltChunk<T> {
+    pub chunk_x: i32,
+    pub chunk_z: i32,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> BuiltChunk<T> {
+    pub fn new(chunk_x: i32, chunk_z: i32) -> Self {
+        Self {
+            chunk_x,
+            chunk_z,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 impl<T> Default for BuiltChunk<T> {
     fn default() -> Self {
-        Self(PhantomData)
+        Self::new(0, 0)
     }
 }
 
 impl<T> fmt::Debug for BuiltChunk<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("BuiltChunk").finish()
+        f.debug_tuple("BuiltChunk")
+            .field(&self.chunk_x)
+            .field(&self.chunk_z)
+            .finish()
+    }
+}
+
+impl<T> fmt::Display for BuiltChunk<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Chunk ({}, {})", self.chunk_x, self.chunk_z)
     }
 }
 
@@ -32,17 +55,37 @@ unsafe impl<T> Sync for BuiltChunk<T> {}
 
 /// Component that signifies a built chunk section.
 #[derive(Component)]
-pub struct BuiltChunkSection<T>(PhantomData<T>);
+pub struct BuiltChunkSection<T> {
+    pub section_y: u8,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> BuiltChunkSection<T> {
+    pub fn new(section_y: u8) -> Self {
+        Self {
+            section_y,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 impl<T> Default for BuiltChunkSection<T> {
     fn default() -> Self {
-        Self(PhantomData)
+        Self::new(0)
     }
 }
 
 impl<T> fmt::Debug for BuiltChunkSection<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("BuiltChunkSection").finish()
+        f.debug_tuple("BuiltChunkSection")
+            .field(&self.section_y)
+            .finish()
+    }
+}
+
+impl<T> fmt::Display for BuiltChunkSection<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Section {}", self.section_y)
     }
 }
 
