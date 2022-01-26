@@ -15,14 +15,14 @@ use bevy_render::mesh::Mesh;
 
 use brine_chunk::Chunk;
 
+mod block_mesh;
 pub mod component;
 mod naive_blocks;
 mod plugin;
-mod visible_faces;
 
+pub use self::block_mesh::{GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder};
 pub use naive_blocks::NaiveBlocksChunkBuilder;
 pub use plugin::ChunkBuilderPlugin;
-pub use visible_faces::VisibleFacesChunkBuilder;
 
 pub trait AddToWorld {
     fn add_to_world(self, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Entity;
