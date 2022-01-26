@@ -2,17 +2,13 @@
 
 use std::marker::PhantomData;
 
-use bevy_asset::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_log::prelude::*;
-use bevy_math::prelude::*;
-use bevy_pbr::PbrBundle;
-use bevy_render::{
-    mesh::{Indices, VertexAttributeValues},
+use bevy::{
     prelude::*,
-    render_resource::PrimitiveTopology,
+    render::{
+        mesh::{Indices, VertexAttributeValues},
+        render_resource::PrimitiveTopology,
+    },
 };
-use bevy_transform::prelude::*;
 use block_mesh::{
     ndshape::{ConstShape3u32, Shape},
     GreedyQuadsBuffer, MergeVoxel, OrientedBlockFace, UnitQuadBuffer, UnorientedQuad, Voxel,

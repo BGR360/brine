@@ -1106,15 +1106,7 @@ dependencies = [
 name = "brine_voxel"
 version = "0.0.0"
 dependencies = [
- "bevy_app",
- "bevy_asset",
- "bevy_ecs",
- "bevy_log",
- "bevy_math",
- "bevy_pbr",
- "bevy_render",
- "bevy_tasks",
- "bevy_transform",
+ "bevy",
  "block-mesh",
  "brine_chunk",
  "brine_proto",

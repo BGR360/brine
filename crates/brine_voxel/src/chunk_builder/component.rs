@@ -1,8 +1,6 @@
 use std::{fmt, marker::PhantomData};
 
-use bevy_ecs::prelude::*;
-use bevy_math::prelude::*;
-use bevy_transform::prelude::*;
+use bevy::prelude::*;
 
 /// Component that stores the original chunk data for a chunk.
 #[derive(Component)]

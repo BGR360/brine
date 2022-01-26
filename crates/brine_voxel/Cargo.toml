@@ -4,15 +4,8 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.6"
-bevy_asset = "0.6"
-bevy_ecs = "0.6"
-bevy_log = "0.6"
-bevy_math = "0.6"
-bevy_pbr = "0.6"
-bevy_render = "0.6"
-bevy_tasks = "0.6"
-bevy_transform = "0.6"
+bevy = { version = "0.6" }
+
 block-mesh = "0.1"
 futures-lite = "1"
 

@@ -1,12 +1,10 @@
 use std::{any::Any, marker::PhantomData};
 
-use bevy_app::prelude::*;
-use bevy_asset::prelude::*;
-use bevy_core::prelude::*;
-use bevy_ecs::{event::Events, prelude::*};
-use bevy_log::prelude::*;
-use bevy_render::prelude::*;
-use bevy_tasks::{prelude::*, Task};
+use bevy::{
+    ecs::event::Events,
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
+};
 use futures_lite::future;
 
 use brine_proto::event;

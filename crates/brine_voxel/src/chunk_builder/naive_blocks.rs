@@ -1,11 +1,6 @@
 //! Implementation of a chunk builder that just generates a cube for each block.
 
-use bevy_asset::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_math::prelude::*;
-use bevy_pbr::PbrBundle;
-use bevy_render::prelude::*;
-use bevy_transform::prelude::*;
+use bevy::prelude::*;
 
 use brine_chunk::{BlockState, Chunk, ChunkSection};
 

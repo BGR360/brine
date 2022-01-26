@@ -9,9 +9,7 @@
 //! various assets. See the [`ChunkBuilder`] docs for details on how this is
 //! dealt with.
 
-use bevy_asset::Assets;
-use bevy_ecs::{entity::Entity, system::Commands};
-use bevy_render::mesh::Mesh;
+use bevy::prelude::*;
 
 use brine_chunk::Chunk;
 
