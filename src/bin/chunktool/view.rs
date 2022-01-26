@@ -1,6 +1,7 @@
-use std::{f32::consts::PI, path::PathBuf};
+use std::{f32::consts::PI, marker::PhantomData, path::PathBuf};
 
 use bevy::{
+    log::{Level, LogSettings},
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
     render::{options::WgpuOptions, render_resource::WgpuFeatures},
@@ -9,13 +10,15 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection, Chunk},
-    ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
+    component::{BuiltChunk, BuiltChunkSection},
+    ChunkBuilder, ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
+    VisibleFacesChunkBuilder,
 };
 
 use brine::{
     chunk::{load_chunk, Result},
     error::log_error,
+    DEFAULT_LOG_FILTER,
 };
 use clap::ArgEnum;
 
@@ -27,52 +30,51 @@ pub struct Args {
 
     /// Which chunk builder to test.
     #[clap(arg_enum, short, long, default_value = "visible_faces")]
-    builder: ChunkBuilder,
+    builder: ChunkBuilderType,
 }
 
 #[derive(Clone, ArgEnum)]
 #[clap(rename_all = "snake_case")]
-enum ChunkBuilder {
+enum ChunkBuilderType {
     VisibleFaces,
     GreedyQuads,
 }
+
+const DISTANCE_FROM_ORIGIN: f32 = 13.0;
 
 pub fn main(args: Args) {
     println!("{}", args.file.to_string_lossy());
 
     let mut app = App::new();
 
-    app.add_plugins(DefaultPlugins)
-        .insert_resource(WgpuOptions {
-            features: WgpuFeatures::POLYGON_MODE_LINE,
-            ..Default::default()
-        })
-        .insert_resource(Msaa { samples: 4 })
-        .insert_resource(WireframeConfig { global: true })
-        .add_plugin(WireframePlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(ProtocolPlugin);
+    app.insert_resource(LogSettings {
+        level: Level::DEBUG,
+        filter: String::from(DEFAULT_LOG_FILTER),
+    })
+    .insert_resource(WgpuOptions {
+        features: WgpuFeatures::POLYGON_MODE_LINE,
+        ..Default::default()
+    })
+    .add_plugins(DefaultPlugins)
+    .insert_resource(Msaa { samples: 4 })
+    .insert_resource(WireframeConfig { global: true })
+    .add_plugin(WireframePlugin)
+    .add_plugin(WorldInspectorPlugin::new())
+    .add_plugin(ProtocolPlugin);
 
-    app.add_plugin(ChunkBuilderPlugin::<NaiveBlocksChunkBuilder>::shared())
-        .add_system(center_section_at_bottom_of_chunk::<NaiveBlocksChunkBuilder>)
-        .add_system(put_chunk_on_left::<NaiveBlocksChunkBuilder>);
+    app.add_plugin(ChunkViewerPlugin::<NaiveBlocksChunkBuilder>::on_left());
 
     match args.builder {
-        ChunkBuilder::VisibleFaces => {
-            app.add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::shared())
-                .add_system(center_section_at_bottom_of_chunk::<VisibleFacesChunkBuilder>)
-                .add_system(put_chunk_on_right::<VisibleFacesChunkBuilder>);
+        ChunkBuilderType::VisibleFaces => {
+            app.add_plugin(ChunkViewerPlugin::<VisibleFacesChunkBuilder>::on_right());
         }
-        ChunkBuilder::GreedyQuads => {
-            app.add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::shared())
-                .add_system(center_section_at_bottom_of_chunk::<GreedyQuadsChunkBuilder>)
-                .add_system(put_chunk_on_right::<GreedyQuadsChunkBuilder>);
+        ChunkBuilderType::GreedyQuads => {
+            app.add_plugin(ChunkViewerPlugin::<GreedyQuadsChunkBuilder>::on_right());
         }
     }
 
     app.add_startup_system(load_chunk_system.chain(log_error))
-        .add_startup_system(set_up_camera)
-        .add_system(rotate_chunk);
+        .add_startup_system(set_up_camera);
 
     app.insert_resource(args);
     app.run();
@@ -114,52 +116,88 @@ fn set_up_camera(mut commands: Commands) {
     });
 }
 
-fn put_chunk_on_left<T: Send + Sync + 'static>(
-    query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
-    commands: Commands,
-) {
-    move_and_name(query, commands, Vec3::X * -13.0);
-}
-
-fn put_chunk_on_right<T: Send + Sync + 'static>(
-    query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
-    commands: Commands,
-) {
-    move_and_name(query, commands, Vec3::X * 13.0);
-}
-
-fn move_and_name<T: Send + Sync + 'static>(
-    mut query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
-    mut commands: Commands,
+struct ChunkViewerPlugin<T> {
     position: Vec3,
-) {
-    for (entity, mut transform) in query.iter_mut() {
-        transform.translation = position;
-        transform.rotate(Quat::from_rotation_y(PI / 4.0));
 
-        let name = std::any::type_name::<T>();
-        commands.entity(entity).insert(Name::new(name));
+    _phantom: PhantomData<T>,
+}
+
+impl<T> Plugin for ChunkViewerPlugin<T>
+where
+    T: ChunkBuilder + Default + Send + Sync + 'static,
+    <T as ChunkBuilder>::Output: Send,
+{
+    fn build(&self, app: &mut App) {
+        app.add_plugin(ChunkBuilderPlugin::<T>::shared());
+        app.add_system(Self::center_section_at_bottom_of_chunk);
+
+        let position = self.position;
+        app.add_system(
+            move |query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
+                  commands: Commands| {
+                Self::move_and_rotate(query, commands, position)
+            },
+        );
+
+        app.add_system(Self::rotate_chunk);
     }
 }
 
-fn center_section_at_bottom_of_chunk<T: Send + Sync + 'static>(
-    mut query: Query<&mut Transform, Added<BuiltChunkSection<T>>>,
-) {
-    for mut transform in query.iter_mut() {
-        transform.translation = Vec3::new(-8.0, -8.0, -8.0);
+impl<T> ChunkViewerPlugin<T>
+where
+    T: ChunkBuilder + Send + Sync + 'static,
+{
+    pub fn on_left() -> Self {
+        Self::at_position(-Vec3::X * DISTANCE_FROM_ORIGIN)
     }
-}
 
-fn rotate_chunk(input: Res<Input<KeyCode>>, mut query: Query<&mut Transform, With<Chunk>>) {
-    for mut transform in query.iter_mut() {
-        for keypress in input.get_just_pressed() {
-            match keypress {
-                KeyCode::Left => transform.rotate(Quat::from_rotation_y(-PI / 4.0)),
-                KeyCode::Right => transform.rotate(Quat::from_rotation_y(PI / 4.0)),
-                KeyCode::Down => transform.rotate(Quat::from_rotation_x(PI / 4.0)),
-                KeyCode::Up => transform.rotate(Quat::from_rotation_x(-PI / 4.0)),
-                KeyCode::Escape => transform.rotation = Quat::from_rotation_y(PI / 4.0),
-                _ => {}
+    pub fn on_right() -> Self {
+        Self::at_position(Vec3::X * DISTANCE_FROM_ORIGIN)
+    }
+
+    pub fn at_position(position: Vec3) -> Self {
+        Self {
+            position,
+            _phantom: PhantomData,
+        }
+    }
+
+    fn move_and_rotate(
+        mut query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
+        mut commands: Commands,
+        position: Vec3,
+    ) {
+        for (entity, mut transform) in query.iter_mut() {
+            transform.translation = position;
+            transform.rotate(Quat::from_rotation_y(PI / 4.0));
+
+            let name = std::any::type_name::<T>();
+            commands.entity(entity).insert(Name::new(name));
+        }
+    }
+
+    fn center_section_at_bottom_of_chunk(
+        mut query: Query<&mut Transform, Added<BuiltChunkSection<T>>>,
+    ) {
+        for mut transform in query.iter_mut() {
+            transform.translation = Vec3::new(-8.0, -8.0, -8.0);
+        }
+    }
+
+    fn rotate_chunk(
+        input: Res<Input<KeyCode>>,
+        mut query: Query<&mut Transform, With<BuiltChunk<T>>>,
+    ) {
+        for mut transform in query.iter_mut() {
+            for keypress in input.get_just_pressed() {
+                match keypress {
+                    KeyCode::Left => transform.rotate(Quat::from_rotation_y(-PI / 4.0)),
+                    KeyCode::Right => transform.rotate(Quat::from_rotation_y(PI / 4.0)),
+                    KeyCode::Down => transform.rotate(Quat::from_rotation_x(PI / 4.0)),
+                    KeyCode::Up => transform.rotate(Quat::from_rotation_x(-PI / 4.0)),
+                    KeyCode::Escape => transform.rotation = Quat::from_rotation_y(PI / 4.0),
+                    _ => {}
+                }
             }
         }
     }
