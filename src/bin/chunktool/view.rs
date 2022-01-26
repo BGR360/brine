@@ -1,4 +1,8 @@
-use std::{f32::consts::PI, marker::PhantomData, path::PathBuf};
+use std::{
+    f32::consts::PI,
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 
 use bevy::{
     log::{Level, LogSettings},
@@ -10,7 +14,7 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection},
+    component::{BuiltChunk, BuiltChunkSection, Chunk},
     ChunkBuilder, ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
     VisibleFacesChunkBuilder,
 };
@@ -25,8 +29,8 @@ use clap::ArgEnum;
 /// Loads a chunk from a file and views it in 3D.
 #[derive(clap::Args)]
 pub struct Args {
-    /// Path to a chunk data file to load.
-    file: PathBuf,
+    /// Paths to one or more chunk data files to load.
+    files: Vec<PathBuf>,
 
     /// Which chunk builder to test.
     #[clap(arg_enum, short, long, default_value = "visible_faces")]
@@ -40,11 +44,22 @@ enum ChunkBuilderType {
     GreedyQuads,
 }
 
+struct Files {
+    files: Vec<PathBuf>,
+    current: usize,
+}
+
+impl Files {
+    fn next_path(&mut self) -> &Path {
+        let path = &self.files[self.current];
+        self.current = (self.current + 1) % self.files.len();
+        path
+    }
+}
+
 const DISTANCE_FROM_ORIGIN: f32 = 13.0;
 
 pub fn main(args: Args) {
-    println!("{}", args.file.to_string_lossy());
-
     let mut app = App::new();
 
     app.insert_resource(LogSettings {
@@ -73,21 +88,25 @@ pub fn main(args: Args) {
         }
     }
 
-    app.add_startup_system(load_chunk_system.chain(log_error))
-        .add_startup_system(set_up_camera);
+    app.add_startup_system(load_first_chunk.chain(log_error))
+        .add_startup_system(set_up_camera)
+        .add_system(load_next_chunk.chain(log_error));
 
-    app.insert_resource(args);
+    app.insert_resource(Files {
+        files: args.files,
+        current: 0,
+    });
     app.run();
 }
 
 #[derive(Component)]
 struct LoadChunk(PathBuf);
 
-fn load_chunk_system(
-    args: Res<Args>,
-    mut chunk_events: EventWriter<event::clientbound::ChunkData>,
+fn load_and_send_chunk(
+    path: &Path,
+    chunk_events: &mut EventWriter<event::clientbound::ChunkData>,
 ) -> Result<()> {
-    let chunk = load_chunk(&args.file)?;
+    let chunk = load_chunk(path)?;
     debug!("loaded chunk: {:#?}", chunk);
 
     let sections = chunk.data.sections();
@@ -105,6 +124,30 @@ fn load_chunk_system(
         chunk_data: single_section_chunk,
     });
 
+    Ok(())
+}
+
+fn load_first_chunk(
+    mut files: ResMut<Files>,
+    mut chunk_events: EventWriter<event::clientbound::ChunkData>,
+) -> Result<()> {
+    load_and_send_chunk(files.next_path(), &mut chunk_events)
+}
+
+fn load_next_chunk(
+    input: Res<Input<KeyCode>>,
+    mut files: ResMut<Files>,
+    mut chunk_events: EventWriter<event::clientbound::ChunkData>,
+    query: Query<Entity, With<Chunk>>,
+    mut commands: Commands,
+) -> Result<()> {
+    if input.just_pressed(KeyCode::Return) || input.just_pressed(KeyCode::Space) {
+        for entity in query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+
+        load_and_send_chunk(files.next_path(), &mut chunk_events)?;
+    }
     Ok(())
 }
 
