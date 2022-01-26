@@ -101,13 +101,13 @@ pub struct BuiltChunkBundle<Builder: 'static> {
 impl<Builder: 'static> BuiltChunkBundle<Builder> {
     pub fn new(chunk_x: i32, chunk_z: i32) -> Self {
         Self {
+            built_chunk: BuiltChunk::<Builder>::new(chunk_x, chunk_z),
             transform: Transform::from_translation(Vec3::new(
                 (chunk_x * 16) as f32,
                 0.0,
                 (chunk_z * 16) as f32,
             )),
             global_transform: GlobalTransform::default(),
-            built_chunk: BuiltChunk::<Builder>::default(),
         }
     }
 }
@@ -122,9 +122,9 @@ pub struct BuiltChunkSectionBundle<Builder: 'static> {
 impl<Builder: 'static> BuiltChunkSectionBundle<Builder> {
     pub fn new(section_y: u8) -> Self {
         Self {
+            built_chunk_section: BuiltChunkSection::<Builder>::new(section_y),
             transform: Transform::from_translation(Vec3::new(0.0, (section_y * 16) as f32, 0.0)),
             global_transform: GlobalTransform::default(),
-            built_chunk_section: BuiltChunkSection::<Builder>::default(),
         }
     }
 }

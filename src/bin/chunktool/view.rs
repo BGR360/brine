@@ -130,14 +130,12 @@ where
     fn build(&self, app: &mut App) {
         app.add_plugin(ChunkBuilderPlugin::<T>::shared());
         app.add_system(Self::center_section_at_bottom_of_chunk);
+        app.add_system(Self::rename_chunks);
 
         let position = self.position;
-        app.add_system(
-            move |query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
-                  commands: Commands| {
-                Self::move_and_rotate(query, commands, position)
-            },
-        );
+        app.add_system(move |query: Query<&mut Transform, Added<BuiltChunk<T>>>| {
+            Self::move_and_rotate(query, position)
+        });
 
         app.add_system(Self::rotate_chunk);
     }
@@ -162,17 +160,18 @@ where
         }
     }
 
-    fn move_and_rotate(
-        mut query: Query<(Entity, &mut Transform), Added<BuiltChunk<T>>>,
-        mut commands: Commands,
-        position: Vec3,
-    ) {
-        for (entity, mut transform) in query.iter_mut() {
+    fn move_and_rotate(mut query: Query<&mut Transform, Added<BuiltChunk<T>>>, position: Vec3) {
+        for mut transform in query.iter_mut() {
             transform.translation = position;
             transform.rotate(Quat::from_rotation_y(PI / 4.0));
+        }
+    }
 
-            let name = std::any::type_name::<T>();
-            commands.entity(entity).insert(Name::new(name));
+    fn rename_chunks(mut query: Query<&mut Name, (With<BuiltChunk<T>>, Added<Name>)>) {
+        let builder_name = std::any::type_name::<T>().split("::").last().unwrap();
+        for mut name in query.iter_mut() {
+            let new_name = format!("{} ({})", **name, builder_name);
+            name.set(new_name);
         }
     }
 
