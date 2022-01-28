@@ -77,16 +77,16 @@ impl Chunks {
     fn load_next_file(&mut self) -> Result<()> {
         let path = self.next_file();
         let chunk = load_chunk(path)?;
-        self.next_section = chunk.sections().len() - 1;
+        self.next_section = chunk.sections.len() - 1;
         self.chunk = Some(chunk);
         Ok(())
     }
 
     fn next_section(&mut self) -> ChunkSection {
-        let sections = self.chunk().sections();
+        let sections = &self.chunk().sections;
         let section = sections[self.next_section].clone();
         self.next_section = if self.next_section == 0 {
-            self.chunk().sections().len() - 1
+            sections.len() - 1
         } else {
             self.next_section - 1
         };

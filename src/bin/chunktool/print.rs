@@ -24,7 +24,7 @@ fn print_chunk(path: &Path) -> Result<()> {
     let chunk = load_chunk(path)?;
 
     let section_ys = chunk
-        .sections()
+        .sections
         .iter()
         .map(|section| section.chunk_y)
         .collect::<Vec<_>>();
@@ -36,7 +36,7 @@ fn print_chunk(path: &Path) -> Result<()> {
     println!("{} Sections:", section_ys.len());
     println!("{:?}", section_ys);
 
-    for section in chunk.sections().iter().rev() {
+    for section in chunk.sections.iter().rev() {
         println!();
         println!("=============== Section ===============");
         println!();

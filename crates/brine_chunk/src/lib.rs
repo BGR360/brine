@@ -65,14 +65,6 @@ impl Chunk {
     pub fn is_full(&self) -> bool {
         self.biomes.is_some()
     }
-
-    pub fn sections(&self) -> &[ChunkSection] {
-        &self.sections[..]
-    }
-
-    pub fn sections_mut(&mut self) -> &mut [ChunkSection] {
-        &mut self.sections[..]
-    }
 }
 
 /// A [`ChunkSection`] is a 16x16x16 cubic section of a [`Chunk`].

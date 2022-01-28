@@ -64,7 +64,7 @@ impl NaiveBlocksChunkBuilder {
             chunk_z: chunk.chunk_z,
             block_mesh: Mesh::from(shape::Cube { size: 1.0 }),
             sections: chunk
-                .sections()
+                .sections
                 .iter()
                 .map(Self::build_chunk_section)
                 .collect(),
