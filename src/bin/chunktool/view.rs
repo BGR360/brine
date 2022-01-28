@@ -12,9 +12,10 @@ use bevy::{
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
 
+use brine_chunk::{Chunk, ChunkData, ChunkSection};
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection, Chunk},
+    component::{BuiltChunk, BuiltChunkSection, Chunk as ChunkComponent},
     ChunkBuilder, ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
     VisibleFacesChunkBuilder,
 };
@@ -44,16 +45,69 @@ enum ChunkBuilderType {
     GreedyQuads,
 }
 
-struct Files {
+struct Chunks {
     files: Vec<PathBuf>,
-    current: usize,
+    next_file: usize,
+
+    chunk: Option<Chunk>,
+    next_section: usize,
 }
 
-impl Files {
-    fn next_path(&mut self) -> &Path {
-        let path = &self.files[self.current];
-        self.current = (self.current + 1) % self.files.len();
+impl Chunks {
+    fn new(files: Vec<PathBuf>) -> Self {
+        Self {
+            files,
+            next_file: 0,
+
+            chunk: None,
+            next_section: 0,
+        }
+    }
+
+    fn chunk(&self) -> &Chunk {
+        self.chunk.as_ref().unwrap()
+    }
+
+    fn next_file(&mut self) -> &Path {
+        let path = &self.files[self.next_file];
+        self.next_file = (self.next_file + 1) % self.files.len();
         path
+    }
+
+    fn load_next_file(&mut self) -> Result<()> {
+        let path = self.next_file();
+        let chunk = load_chunk(path)?;
+        self.next_section = chunk.data.sections().len() - 1;
+        self.chunk = Some(chunk);
+        Ok(())
+    }
+
+    fn next_section(&mut self) -> ChunkSection {
+        let sections = self.chunk().data.sections();
+        let section = sections[self.next_section].clone();
+        self.next_section = if self.next_section == 0 {
+            self.chunk().data.sections().len() - 1
+        } else {
+            self.next_section - 1
+        };
+        section
+    }
+
+    fn send_next_section(&mut self, chunk_events: &mut EventWriter<event::clientbound::ChunkData>) {
+        let section = self.next_section();
+
+        let single_section_chunk = Chunk {
+            chunk_x: self.chunk().chunk_x,
+            chunk_z: self.chunk().chunk_z,
+            data: ChunkData::Full {
+                sections: vec![section],
+                biomes: Default::default(),
+            },
+        };
+
+        chunk_events.send(event::clientbound::ChunkData {
+            chunk_data: single_section_chunk,
+        });
     }
 }
 
@@ -92,62 +146,42 @@ pub fn main(args: Args) {
         .add_startup_system(set_up_camera)
         .add_system(load_next_chunk.chain(log_error));
 
-    app.insert_resource(Files {
-        files: args.files,
-        current: 0,
-    });
+    app.insert_resource(Chunks::new(args.files));
     app.run();
 }
 
-#[derive(Component)]
-struct LoadChunk(PathBuf);
-
-fn load_and_send_chunk(
-    path: &Path,
-    chunk_events: &mut EventWriter<event::clientbound::ChunkData>,
-) -> Result<()> {
-    let chunk = load_chunk(path)?;
-    debug!("loaded chunk: {:#?}", chunk);
-
-    let sections = chunk.data.sections();
-    let section = sections[sections.len() - 1].clone();
-
-    let single_section_chunk = brine_chunk::Chunk {
-        data: brine_chunk::ChunkData::Full {
-            sections: vec![section],
-            biomes: Default::default(),
-        },
-        ..chunk
-    };
-
-    chunk_events.send(event::clientbound::ChunkData {
-        chunk_data: single_section_chunk,
-    });
-
-    Ok(())
-}
-
 fn load_first_chunk(
-    mut files: ResMut<Files>,
+    mut chunks: ResMut<Chunks>,
     mut chunk_events: EventWriter<event::clientbound::ChunkData>,
 ) -> Result<()> {
-    load_and_send_chunk(files.next_path(), &mut chunk_events)
+    chunks.load_next_file()?;
+    chunks.send_next_section(&mut chunk_events);
+    Ok(())
 }
 
 fn load_next_chunk(
     input: Res<Input<KeyCode>>,
-    mut files: ResMut<Files>,
+    mut chunks: ResMut<Chunks>,
     mut chunk_events: EventWriter<event::clientbound::ChunkData>,
-    query: Query<Entity, With<Chunk>>,
+    query: Query<Entity, With<ChunkComponent>>,
     mut commands: Commands,
 ) -> Result<()> {
-    if input.just_pressed(KeyCode::Return) || input.just_pressed(KeyCode::Space) {
+    let should_show_next =
+        input.just_pressed(KeyCode::Return) || input.just_pressed(KeyCode::Space);
+    let should_load_next_file = input.just_pressed(KeyCode::Return);
+
+    if should_load_next_file {
+        chunks.load_next_file()?;
+    }
+
+    if should_show_next {
         for entity in query.iter() {
             commands.entity(entity).despawn_recursive();
         }
 
-        load_and_send_chunk(files.next_path(), &mut chunk_events)?;
+        chunks.send_next_section(&mut chunk_events);
     }
+
     Ok(())
 }
 
