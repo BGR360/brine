@@ -2,7 +2,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
 
-use brine_chunk::{BlockState, Chunk, Palette};
+use brine_chunk::{decode::Result, BlockState, Chunk, Palette};
 use brine_net::CodecReader;
 use brine_proto::event;
 
@@ -37,7 +37,7 @@ fn handle_chunk_data(
     }
 }
 
-pub fn get_chunk_from_packet(packet: &Packet) -> brine_chunk::Result<Option<Chunk>> {
+pub fn get_chunk_from_packet(packet: &Packet) -> Result<Option<Chunk>> {
     if let Packet::Known(packet::Packet::ChunkData_HeightMap(chunk_data)) = packet {
         Ok(Some(Chunk::decode(
             chunk_data.chunk_x,

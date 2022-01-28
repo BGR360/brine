@@ -35,8 +35,10 @@ use std::{fmt, io};
 
 use tracing::trace;
 
-use crate::varint::VarIntRead;
-use crate::{BlockState, Result};
+use crate::{
+    decode::{Result, VarIntRead},
+    BlockState,
+};
 
 /// Trait representing a block state palette.
 pub trait Palette {

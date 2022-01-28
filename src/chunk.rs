@@ -2,7 +2,7 @@
 
 use std::{fs, io, path::Path};
 
-use brine_chunk::{Chunk, Error as ChunkError};
+use brine_chunk::{decode::Error as ChunkError, Chunk};
 use brine_proto_backend::{
     backend_stevenarella::{
         chunks::get_chunk_from_packet,

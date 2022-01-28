@@ -2,19 +2,12 @@
 //!
 //! Currently only supports version 1.14.4.
 
-use std::{fmt, io, num::TryFromIntError};
+use std::fmt;
 
-use byteorder::{BigEndian, ReadBytesExt};
-use tracing::trace;
-
-pub mod packed_vec;
+pub mod decode;
 pub mod palette;
-mod varint;
 
 pub use palette::{Palette, SectionPalette};
-use varint::VarIntRead;
-
-use crate::packed_vec::PackedIntVec;
 
 pub const CHUNK_HEIGHT: usize = 256;
 pub const CHUNK_WIDTH: usize = 16;
@@ -22,17 +15,6 @@ pub const SECTION_HEIGHT: usize = 16;
 pub const SECTION_WIDTH: usize = CHUNK_WIDTH;
 pub const SECTIONS_PER_CHUNK: usize = CHUNK_HEIGHT / SECTION_HEIGHT;
 pub const BLOCKS_PER_SECTION: usize = SECTION_HEIGHT * SECTION_WIDTH * SECTION_WIDTH;
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error(transparent)]
-    Io(#[from] io::Error),
-
-    #[error(transparent)]
-    InvalidInt(#[from] TryFromIntError),
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// A [`Chunk`] is a 16x256x16 chunk of blocks. It is split vertically into 16 chunk
 /// sections (see [`ChunkSection`]).
@@ -54,93 +36,6 @@ impl Chunk {
             chunk_z,
             data: Default::default(),
         }
-    }
-
-    /// Decodes a chunk from data provided by a Minecraft protocol packet.
-    ///
-    /// The `primary_bit_mask` indicates which chunk sections are included in
-    /// the data blob. A `1` bit indicates that the chunk section is included;
-    /// the least significant bit is for the lowest section (i.e., Y=0).
-    ///
-    /// The `full_chunk` boolean indicates whether the data blob includes the
-    /// full data of a chunk.
-    ///
-    /// * If `full_chunk` is true, then the blob includes biome data and all
-    ///   (non-empty) sections in the chunk. Sections not specified in the
-    ///   primary bit mask are empty sections.
-    ///
-    /// * If `full_chunk` is false, then the blob contains only chunk sections
-    ///   that have changed (basically a big multi-block delta). Sections not
-    ///   specified in the primary bit mask are not changed and should be left
-    ///   as-is. Biome data is *not* included.
-    ///
-    /// The `global_palette` is needed in order to perform translations from
-    /// compacted block state IDs to full block states. See the [`palette`]
-    /// module for more information on palettes.
-    ///
-    /// See:
-    /// * <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Packet_structure>
-    /// * <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Data_structure>
-    pub fn decode(
-        chunk_x: i32,
-        chunk_z: i32,
-        full_chunk: bool,
-        primary_bit_mask: u16,
-        global_palette: &impl Palette,
-        data: &mut impl io::Read,
-    ) -> Result<Self> {
-        trace!("Chunk::decode");
-
-        // Blob will always contain chunk sections.
-        let sections = Self::decode_chunk_sections(primary_bit_mask, global_palette, data)?;
-
-        let data = if full_chunk {
-            let biomes = Box::new(Biomes::decode(data)?);
-
-            ChunkData::Full { sections, biomes }
-        } else {
-            ChunkData::Delta { sections }
-        };
-
-        Ok(Self {
-            chunk_x,
-            chunk_z,
-            data,
-        })
-    }
-
-    /// Decodes a list of [`ChunkSection`]s from a data blob.
-    pub fn decode_chunk_sections(
-        primary_bit_mask: u16,
-        global_palette: &impl Palette,
-        data: &mut impl io::Read,
-    ) -> Result<Vec<ChunkSection>> {
-        trace!("ChunkSection::decode_chunk_sections");
-
-        let section_ys = Self::bitmask_to_section_y_coordinates(primary_bit_mask);
-        trace!("section_ys: {:?}", &section_ys);
-
-        let mut sections = Vec::new();
-        for section_y in section_ys {
-            sections.push(ChunkSection::decode(section_y, global_palette, data)?);
-        }
-
-        Ok(sections)
-    }
-
-    /// Given a bitmask, returns which chunk section y-coordinates correspond to
-    /// the chunk sections in the data blob.
-    ///
-    /// See also
-    /// <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Empty_sections_and_the_primary_bit_mask>
-    pub fn bitmask_to_section_y_coordinates(bitmask: u16) -> Vec<u8> {
-        let mut y_coords = Vec::new();
-        for i in 0..SECTIONS_PER_CHUNK {
-            if (bitmask & (1 << i)) != 0 {
-                y_coords.push(i as u8);
-            }
-        }
-        y_coords
     }
 }
 
@@ -217,49 +112,6 @@ impl ChunkSection {
             block_states: Default::default(),
         }
     }
-
-    /// Decodes a chunk section from a data blob.
-    ///
-    /// The `global_palette` is needed in order to perform translations from
-    /// compacted block state IDs to full block states. See the [`palette`]
-    /// module for more information on palettes.
-    ///
-    /// See also
-    /// <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Chunk_Section_structure>
-    pub fn decode(
-        chunk_y: u8,
-        global_palette: &impl Palette,
-        data: &mut impl io::Read,
-    ) -> Result<Self> {
-        trace!("ChunkSection::decode");
-        let block_count = data.read_i16::<BigEndian>()?.try_into()?;
-
-        let bits_per_block = data.read_u8()?;
-        trace!("bits_per_block: {}", bits_per_block);
-
-        // Protocol spec says any value below 4 should be treated as 4.
-        let bits_per_block = if bits_per_block < 4 {
-            4
-        } else {
-            bits_per_block
-        };
-
-        let block_states = if bits_per_block <= SectionPalette::MAX_BITS_PER_BLOCK {
-            let palette = SectionPalette::decode(global_palette, data)?;
-
-            trace!("palette: {:?}", &palette);
-
-            BlockStates::decode(bits_per_block, &palette, data)?
-        } else {
-            BlockStates::decode(bits_per_block, global_palette, data)?
-        };
-
-        Ok(Self {
-            chunk_y,
-            block_count,
-            block_states,
-        })
-    }
 }
 
 /// The block state for every block in a [`ChunkSection`], stored in
@@ -272,34 +124,6 @@ impl BlockStates {
     #[inline]
     pub fn iter(&self) -> BlockIter<'_> {
         BlockIter::new(self)
-    }
-
-    /// See <https://wiki.vg/index.php?title=Chunk_Format&oldid=14901#Compacted_data_array>.
-    pub fn decode(
-        bits_per_block: u8,
-        palette: &impl Palette,
-        data: &mut impl io::Read,
-    ) -> Result<Self> {
-        trace!("BlockStates::decode");
-
-        let array_length = data.read_var_i32()?;
-        trace!("array_length: {}", array_length);
-
-        let mut longs = Vec::<u64>::with_capacity(array_length.try_into()?);
-        for _ in 0..array_length {
-            longs.push(data.read_u64::<BigEndian>()?);
-        }
-
-        let packed_vec_length = BLOCKS_PER_SECTION;
-        let packed_vec =
-            PackedIntVec::from_parts(longs, packed_vec_length, bits_per_block).unwrap();
-
-        let block_states: Vec<BlockState> = packed_vec
-            .iter()
-            .map(|block_state_id| palette.id_to_block_state(block_state_id).unwrap())
-            .collect();
-
-        Ok(Self(block_states.try_into().unwrap()))
     }
 }
 
@@ -340,12 +164,12 @@ impl<'a> Iterator for BlockIter<'a> {
         }
 
         // Y-Z-X-major order, 4 bits per axis.
-        const Y_MASK: usize = 0b1111_0000_0000;
-        const Z_MASK: usize = 0b0000_1111_0000;
-        const X_MASK: usize = 0b0000_0000_1111;
         const Y_SHIFT: usize = 8;
         const Z_SHIFT: usize = 4;
         const X_SHIFT: usize = 0;
+        const Y_MASK: usize = 0b1111 << Y_SHIFT;
+        const Z_MASK: usize = 0b1111 << Z_SHIFT;
+        const X_MASK: usize = 0b1111 << X_SHIFT;
 
         let x = (self.cur_index & X_MASK) >> X_SHIFT;
         let y = (self.cur_index & Y_MASK) >> Y_SHIFT;
@@ -378,13 +202,6 @@ impl BlockState {
 /// [`Chunk`] is part of.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Biomes([BiomeId; SECTION_WIDTH * SECTION_WIDTH]);
-
-impl Biomes {
-    pub fn decode(_data: &mut impl io::Read) -> Result<Self> {
-        // TODO
-        Ok(Default::default())
-    }
-}
 
 impl Default for Biomes {
     fn default() -> Self {
