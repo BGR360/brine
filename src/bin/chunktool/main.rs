@@ -1,3 +1,4 @@
+mod print;
 mod save;
 mod view;
 
@@ -13,6 +14,7 @@ struct Args {
 
 #[derive(clap::Subcommand)]
 enum Subcommand {
+    Print(print::Args),
     Save(save::Args),
     View(view::Args),
 }
@@ -21,6 +23,7 @@ fn main() {
     let args = Args::parse();
 
     match args.command {
+        Subcommand::Print(args) => print::main(args),
         Subcommand::Save(args) => save::main(args),
         Subcommand::View(args) => view::main(args),
     }
