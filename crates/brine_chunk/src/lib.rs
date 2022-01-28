@@ -18,14 +18,28 @@ pub const BLOCKS_PER_SECTION: usize = SECTION_HEIGHT * SECTION_WIDTH * SECTION_W
 
 /// A [`Chunk`] is a 16x256x16 chunk of blocks. It is split vertically into 16 chunk
 /// sections (see [`ChunkSection`]).
+///
+/// This structure can either represent the full data of a chunk (i.e., when it
+/// is first loaded into the game), or it can represent a delta, in which case
+/// some information may be missing as noted in the fields' documentation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chunk {
     /// Chunk coordinate (block coordinate divided by 16, rounded down).
     pub chunk_x: i32,
+
     /// Chunk coordinate (block coordinate divided by 16, rounded down).
     pub chunk_z: i32,
-    /// Data for this chunk.
-    pub data: ChunkData,
+
+    /// List of non-empty sections in this chunk, in increasing Y order.
+    ///
+    /// If this is not the full data of a chunk, this may not include all
+    /// non-empty sections in the chunk.
+    pub sections: Vec<ChunkSection>,
+
+    /// Grid of biome IDs indicating which biome each vertical slice is part of.
+    ///
+    /// If this is not the full data of a chunk, this is not included.
+    pub biomes: Option<Box<Biomes>>,
     // TODO: block entities
 }
 
@@ -34,59 +48,30 @@ impl Chunk {
         Self {
             chunk_x,
             chunk_z,
-            data: Default::default(),
+            sections: Vec::new(),
+            biomes: Some(Box::new(Biomes::default())),
         }
     }
-}
 
-/// The actual data for a chunk, in its fully decoded form.
-///
-/// Chunk data can either be full or partial. In the former case, this
-/// represents a new chunk that the client should load. In the latter case, it
-/// serves as a big multi-block delta.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ChunkData {
-    Full {
-        /// List of non-empty sections in this chunk, in increasing Y order.
-        sections: Vec<ChunkSection>,
-        /// Grid of biome IDs dictating which biome a given vertical X,Z slice
-        /// is part of.
-        biomes: Box<Biomes>,
-    },
+    pub fn empty_delta(chunk_x: i32, chunk_z: i32) -> Self {
+        Self {
+            biomes: None,
+            ..Self::empty(chunk_x, chunk_z)
+        }
+    }
 
-    Delta {
-        /// List of sections that have changed, in increasing Y order.
-        sections: Vec<ChunkSection>,
-    },
-}
-
-impl ChunkData {
     /// Returns whether or not this contains the full data for a chunk or if
     /// it's just a delta.
     pub fn is_full(&self) -> bool {
-        matches!(self, Self::Full { .. })
+        self.biomes.is_some()
     }
 
     pub fn sections(&self) -> &[ChunkSection] {
-        match self {
-            ChunkData::Full { sections, .. } => sections,
-            ChunkData::Delta { sections } => sections,
-        }
+        &self.sections[..]
     }
 
     pub fn sections_mut(&mut self) -> &mut [ChunkSection] {
-        match self {
-            ChunkData::Full { sections, .. } => sections,
-            ChunkData::Delta { sections } => sections,
-        }
-    }
-}
-
-impl Default for ChunkData {
-    fn default() -> Self {
-        Self::Delta {
-            sections: Default::default(),
-        }
+        &mut self.sections[..]
     }
 }
 

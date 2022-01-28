@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
 
-use brine_chunk::{Chunk, ChunkData, ChunkSection};
+use brine_chunk::{Chunk, ChunkSection};
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
     component::{BuiltChunk, BuiltChunkSection, Chunk as ChunkComponent},
@@ -77,16 +77,16 @@ impl Chunks {
     fn load_next_file(&mut self) -> Result<()> {
         let path = self.next_file();
         let chunk = load_chunk(path)?;
-        self.next_section = chunk.data.sections().len() - 1;
+        self.next_section = chunk.sections().len() - 1;
         self.chunk = Some(chunk);
         Ok(())
     }
 
     fn next_section(&mut self) -> ChunkSection {
-        let sections = self.chunk().data.sections();
+        let sections = self.chunk().sections();
         let section = sections[self.next_section].clone();
         self.next_section = if self.next_section == 0 {
-            self.chunk().data.sections().len() - 1
+            self.chunk().sections().len() - 1
         } else {
             self.next_section - 1
         };
@@ -97,12 +97,8 @@ impl Chunks {
         let section = self.next_section();
 
         let single_section_chunk = Chunk {
-            chunk_x: self.chunk().chunk_x,
-            chunk_z: self.chunk().chunk_z,
-            data: ChunkData::Full {
-                sections: vec![section],
-                biomes: Default::default(),
-            },
+            sections: vec![section],
+            ..Chunk::empty(self.chunk().chunk_x, self.chunk().chunk_z)
         };
 
         chunk_events.send(event::clientbound::ChunkData {

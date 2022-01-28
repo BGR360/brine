@@ -97,7 +97,7 @@ where
         task_pool: &AsyncComputeTaskPool,
     ) {
         let chunk = chunk_event.chunk_data;
-        if let brine_chunk::ChunkData::Delta { .. } = chunk.data {
+        if !chunk.is_full() {
             return;
         }
 

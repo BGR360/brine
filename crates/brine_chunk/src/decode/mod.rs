@@ -5,8 +5,7 @@ use tracing::trace;
 
 use crate::{
     palette::{Palette, SectionPalette},
-    Biomes, BlockState, BlockStates, Chunk, ChunkData, ChunkSection, BLOCKS_PER_SECTION,
-    SECTIONS_PER_CHUNK,
+    Biomes, BlockState, BlockStates, Chunk, ChunkSection, BLOCKS_PER_SECTION, SECTIONS_PER_CHUNK,
 };
 
 mod packed_vec;
@@ -65,18 +64,17 @@ impl Chunk {
         // Blob will always contain chunk sections.
         let sections = Self::decode_chunk_sections(primary_bit_mask, global_palette, data)?;
 
-        let data = if full_chunk {
-            let biomes = Box::new(Biomes::decode(data)?);
-
-            ChunkData::Full { sections, biomes }
+        let biomes = if full_chunk {
+            Some(Box::new(Biomes::decode(data)?))
         } else {
-            ChunkData::Delta { sections }
+            None
         };
 
         Ok(Self {
             chunk_x,
             chunk_z,
-            data,
+            sections,
+            biomes,
         })
     }
 

@@ -77,7 +77,6 @@ impl VisibleFacesChunkBuilder {
             chunk_x: chunk.chunk_x,
             chunk_z: chunk.chunk_z,
             sections: chunk
-                .data
                 .sections()
                 .iter()
                 .map(Self::build_chunk_section)
@@ -124,7 +123,6 @@ impl GreedyQuadsChunkBuilder {
             chunk_x: chunk.chunk_x,
             chunk_z: chunk.chunk_z,
             sections: chunk
-                .data
                 .sections()
                 .iter()
                 .map(Self::build_chunk_section)
