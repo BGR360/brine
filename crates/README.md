@@ -76,6 +76,12 @@ Logic for decoding chunk data from Minecraft packets.
 
 No Bevy dependencies.
 
+### [`brine_data`](brine_data/)
+
+Provides access to Minecraft data for any version.
+
+No Bevy dependencies.
+
 ### [`brine_net`](brine_net/)
 
 A library for implementing client-server protocols over TCP.

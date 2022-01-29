@@ -1,0 +1,7 @@
+[package]
+name = "brine_data"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+minecraft-data-rs = { git = "https://github.com/BGR360/minecraft-data-rs", branch = "my-fork" }
