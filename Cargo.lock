@@ -1118,6 +1118,7 @@ dependencies = [
  "bevy",
  "block-mesh",
  "brine_chunk",
+ "brine_data",
  "brine_proto",
  "futures-lite",
 ]

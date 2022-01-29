@@ -2,6 +2,8 @@
 
 A library for rendering Minecraft worlds.
 
+TODO: Update README.
+
 Currently all that is implemented is two different [chunk builders] (["visible
 faces"] and ["naive blocks"]) that generate meshes from chunk data. The former
 is implemented using the [`block-mesh`] crate.
