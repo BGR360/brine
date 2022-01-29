@@ -57,7 +57,7 @@ impl Blocks {
         let blocks = api.blocks.blocks_array().unwrap();
 
         let max_state_id = blocks.last().unwrap().max_state_id.unwrap();
-        let mut state_id_to_block = Vec::with_capacity(max_state_id as usize);
+        let mut state_id_to_block = vec![0; (max_state_id + 1) as usize];
 
         for (block_index, block) in blocks.iter().enumerate() {
             let min_state_id = block.min_state_id.unwrap();
@@ -74,7 +74,7 @@ impl Blocks {
     }
 
     pub fn for_version(version: impl Into<Version>) -> Self {
-        Self::from_api(&Api::new(version.into()))
+        Self::from_api(&Api::new(version.into().0))
     }
 
     /// Returns the [`Block`] with id `block_id`, or `None` if no such block exists.
