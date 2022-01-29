@@ -43,13 +43,43 @@ game engine.
 
 ### stevenarella
 
-Mega shoutout to @Thinkofname and @iceiix for the hard work put into the
+Mega shoutout to [@Thinkofname] and [@iceiix] for the hard work put into the
 [steven] and [stevenarella] projects respectively. Having a reasonably robust
 implementation of a couple dozen different Java Edition protocol versions
 implemented from the get-go is amazingly helpful for bootstrapping this project.
 
+[@Thinkofname]: https://github.com/thinkofname/
+[@iceiix]: https://github.com/iceiix/
 [steven]: https://github.com/thinkofname/steven
 [stevenarella]: https://github.com/iceiix/stevenarella
+
+### Minecraft data and assets
+
+Thanks to [PrismarineJS] for maintaining the [`minecraft-data`] and
+[`prismarine-chunk`] repositories.
+
+Thanks to [@InventivetalentDev] for maintaining the [`minecraft-assets`]
+repository.
+
+Thanks to [@Trivernis] for [porting `minecraft-data` to Rust].
+
+[PrismarineJS]: https://github.com/PrismarineJS
+[`minecraft-data`]: https://github.com/PrismarineJS/minecraft-data
+[`prismarine-chunk`]: https://github.com/PrismarineJS/prismarine-chunk
+
+[@InventivetalentDev]: https://github.com/InventivetalentDev
+[`minecraft-assets`]: https://github.com/InventivetalentDev/minecraft-assets
+
+[@Trivernis]: https://github.com/Trivernis/
+[porting `minecraft-data` to Rust]: https://github.com/Trivernis/minecraft-data-rs
+
+### Building blocks
+
+Thanks to [@bonsaiboro] for providing multiple useful crates related to voxel
+game development, including [`block-mesh`].
+
+[@bonsaiboro]: https://github.com/bonsaiboro/
+[`block-mesh`]: https://github.com/bonsairobo/block-mesh-rs
 
 [^1]: Being "protocol-generic" isn't new; see projects that came before like
 [steven]/[stevenarella]. What is sort of new is the attempt to abstract the
