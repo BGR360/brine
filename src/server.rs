@@ -57,6 +57,14 @@ fn load_chunks(
     for entry in fs::read_dir(&chunk_directory.path)? {
         let entry = entry?;
 
+        if entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with("chunk_light_")
+        {
+            continue;
+        }
+
         let task: LoadChunkTask = task_pool.spawn(async move { load_chunk(entry.path()) });
 
         commands.spawn().insert(task);

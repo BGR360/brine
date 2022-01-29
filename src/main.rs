@@ -14,7 +14,9 @@ use clap::Parser;
 
 use brine_proto::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};
 use brine_proto_backend::ProtocolBackendPlugin;
-use brine_voxel::chunk_builder::{ChunkBuilderPlugin, VisibleFacesChunkBuilder};
+use brine_voxel::chunk_builder::{
+    ChunkBuilderPlugin, GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder,
+};
 
 use brine::{login::LoginPlugin, server::ServeChunksFromDirectoryPlugin, DEFAULT_LOG_FILTER};
 
@@ -84,7 +86,8 @@ impl Plugin for MinecraftWorldViewerPlugin {
         .insert_resource(Msaa { samples: 4 })
         .add_plugin(WireframePlugin)
         .add_plugin(FlyCameraPlugin)
-        .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
+        // .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
+        .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
         .add_startup_system(set_up_camera);
     }
 }
