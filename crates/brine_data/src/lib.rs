@@ -20,10 +20,12 @@ use block::Blocks;
 /// but access **is** an inexpensive operation.
 pub struct MinecraftData {
     pub blocks: Blocks,
+    pub version: Version,
 }
 
 impl MinecraftData {
-    /// Constructs Minecraft data for the latest stable version.
+    /// Constructs Minecraft data for the latest stable version supported by
+    /// this crate.
     pub fn latest_stable() -> Self {
         Self::for_version(Version::latest_stable())
     }
@@ -31,9 +33,10 @@ impl MinecraftData {
     /// Constructs Minecraft data for the specified [`Version`].
     pub fn for_version(version: impl Into<Version>) -> Self {
         let version = version.into();
-        let api = Api::new(version.0);
+        let api = Api::new(version.0.clone());
         Self {
             blocks: Blocks::from_api(&api),
+            version,
         }
     }
 }
