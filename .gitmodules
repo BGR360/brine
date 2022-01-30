@@ -1,3 +1,6 @@
 [submodule "third_party/stevenarella"]
 	path = third_party/stevenarella
 	url = ../stevenarella
+[submodule "crates/minecraft-assets-rs"]
+	path = crates/minecraft-assets-rs
+	url = https://github.com/BGR360/minecraft-assets-rs

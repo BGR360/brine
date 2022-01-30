@@ -1044,6 +1044,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "brine_asset"
+version = "0.0.0"
+dependencies = [
+ "brine_data",
+ "minecraft-assets",
+]
+
+[[package]]
 name = "brine_chunk"
 version = "0.0.0"
 dependencies = [
@@ -2642,6 +2650,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "maplit"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
+
+[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2690,6 +2704,16 @@ name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a60c7ce501c71e03a9c9c0d35b861413ae925bd979cc7a4e30d060069aaac8d"
+
+[[package]]
+name = "minecraft-assets"
+version = "0.0.1"
+dependencies = [
+ "assert_matches",
+ "maplit",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "minecraft-data-rs"

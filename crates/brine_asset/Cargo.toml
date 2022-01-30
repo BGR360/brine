@@ -1,0 +1,9 @@
+[package]
+name = "brine_asset"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+minecraft-assets = { path = "../minecraft-assets-rs" }
+
+brine_data = { path = "../brine_data" }
