@@ -32,9 +32,10 @@ struct PendingAtlas {
 
 impl PendingAtlas {
     fn all_textures_loaded(&self, asset_server: &AssetServer) -> bool {
-        self.textures
-            .iter()
-            .all(|handle| asset_server.get_load_state(handle) != LoadState::Loading)
+        self.textures.iter().all(|handle| {
+            let load_state = asset_server.get_load_state(handle);
+            load_state != LoadState::Loading
+        })
     }
 }
 
@@ -57,7 +58,7 @@ impl BlockTextures {
     pub fn get_or_load_texture<'a, F, P>(
         &mut self,
         block_state: BlockStateId,
-        asset_server: &mut AssetServer,
+        asset_server: &AssetServer,
         mut get_path: F,
     ) -> Handle<Image>
     where
@@ -66,14 +67,22 @@ impl BlockTextures {
     {
         match self.block_state_to_texture.entry(block_state) {
             Entry::Occupied(handle) => {
-                let handle = handle.get().clone();
-                //assert!(asset_server.get_load_state(&handle) == LoadState::Loaded);
-                handle
+                let handle = handle.get();
+
+                // Check if the texture got unloaded, and load it back in if so.
+                if asset_server.get_load_state(handle) == LoadState::Unloaded {
+                    asset_server.load(asset_server.get_handle_path(handle).unwrap())
+                } else {
+                    handle.clone()
+                }
             }
             Entry::Vacant(entry) => {
                 let handle = get_path(block_state)
                     .map(|path| asset_server.load(path.into()))
-                    .unwrap_or_else(|| self.placeholder_texture.clone());
+                    .unwrap_or_else(|| {
+                        debug!("No path found for {:?}", block_state);
+                        self.placeholder_texture.clone()
+                    });
 
                 entry.insert(handle.clone());
                 handle
@@ -92,7 +101,7 @@ impl BlockTextures {
     pub fn create_texture_atlas<'a, B, F, P>(
         &mut self,
         block_states: B,
-        asset_server: &mut AssetServer,
+        asset_server: &AssetServer,
         mut get_path: F,
     ) -> Handle<TextureAtlas>
     where
@@ -107,7 +116,7 @@ impl BlockTextures {
 
         debug!(
             "Texture atlas requested for block states: {:?}",
-            &block_states
+            block_states.iter().map(|b| b.0).collect::<Vec<_>>()
         );
 
         let textures = block_states
@@ -138,24 +147,36 @@ impl BlockTextures {
         texture_atlases: &mut Assets<TextureAtlas>,
         textures: &mut Assets<Image>,
     ) {
+        if asset_server.get_load_state(&self.placeholder_texture) != LoadState::Loaded {
+            return;
+        }
+
         self.pending_atlases.retain(|pending_atlas| {
             if pending_atlas.all_textures_loaded(asset_server) {
                 debug!(
-                    "Building texture atlas for textures: {:?}",
-                    &pending_atlas.textures
+                    "Building texture atlas for {} textures",
+                    pending_atlas.textures.len()
                 );
 
                 let mut builder = TextureAtlasBuilder::default();
+
                 for handle in pending_atlas.textures.iter() {
                     let handle = if textures.contains(handle) {
                         handle
                     } else {
-                        debug!("here");
+                        debug!(
+                            "not loaded: {:?} - {:?}",
+                            asset_server.get_load_state(handle),
+                            asset_server
+                                .get_handle_path(handle)
+                                .map(|path| path.path().to_string_lossy().to_string())
+                        );
                         &self.placeholder_texture
                     };
-                    let texture = textures.get(handle).unwrap();
-                    builder.add_texture(handle.clone_weak(), texture);
+
                     assert!(textures.get(handle).is_some());
+
+                    builder.add_texture(handle.clone_weak(), textures.get(handle).unwrap());
                 }
 
                 let atlas = builder.finish(textures).unwrap();
@@ -189,7 +210,7 @@ impl TextureBuilderPlugin {
     /// This system loads the placeholder texture at program startup.
     fn load_placeholder_texture(
         mut block_textures: ResMut<BlockTextures>,
-        asset_server: ResMut<AssetServer>,
+        asset_server: Res<AssetServer>,
     ) {
         block_textures.placeholder_texture = asset_server.load(PLACEHOLDER_PATH);
     }
@@ -203,18 +224,17 @@ impl TextureBuilderPlugin {
         query: Query<(Entity, &VoxelMesh), (Added<VoxelMesh>, Without<Handle<StandardMaterial>>)>,
         mc_data: Res<MinecraftData>,
         mut block_textures: ResMut<BlockTextures>,
-        mut asset_server: ResMut<AssetServer>,
+        asset_server: Res<AssetServer>,
         mut commands: Commands,
     ) {
         for (entity, mesh) in query.iter() {
             // Get all the unique block states that are present in this mesh.
             let block_states = Self::get_block_states_in_mesh(mesh);
 
-            let atlas_handle = block_textures.create_texture_atlas(
-                block_states,
-                &mut asset_server,
-                |block_state| get_texture_path(block_state, &mc_data.blocks),
-            );
+            let atlas_handle =
+                block_textures.create_texture_atlas(block_states, &asset_server, |block_state| {
+                    get_texture_path(block_state, &mc_data.blocks)
+                });
 
             commands.entity(entity).insert(atlas_handle);
         }

@@ -12,3 +12,6 @@ futures-lite = "1"
 brine_chunk = { path = "../brine_chunk" }
 brine_data = { path = "../brine_data" }
 brine_proto = { path = "../brine_proto" }
+
+[dev-dependencies]
+minecraft-assets = { path = "../minecraft-assets-rs" }
