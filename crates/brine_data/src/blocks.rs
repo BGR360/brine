@@ -2,6 +2,8 @@
 //!
 //! TODO: about block ids and block states.
 
+use std::collections::HashMap;
+
 use crate::{Api, Version};
 
 pub use minecraft_data_rs::models::block::{Block, State as BlockState};
@@ -43,13 +45,17 @@ pub struct Blocks {
     /// Block ids are not contiguous (though they are monotonic). Therefore,
     /// there is no meaningful mapping one can make using an index into this
     /// list.
-    blocks: Vec<Block>,
+    pub blocks: Vec<Block>,
 
-    /// Mapping from [`BlockStateId`] to block.
+    /// Mapping from [`BlockStateId`] to block index.
     ///
     /// Use the `BlockStateId` as an index into this list, and use the
     /// corresponding entry as an index into the `blocks` array.
-    state_id_to_block: Vec<BlockIndexType>,
+    pub state_id_to_block: Vec<BlockIndexType>,
+
+    /// Mapping from block name to block index.
+    // TODO: faster hashmap?
+    pub name_to_block: HashMap<String, BlockIndexType>,
 }
 
 impl Blocks {
@@ -59,17 +65,25 @@ impl Blocks {
         let max_state_id = blocks.last().unwrap().max_state_id.unwrap();
         let mut state_id_to_block = vec![0; (max_state_id + 1) as usize];
 
+        let mut name_to_block = HashMap::default();
+
         for (block_index, block) in blocks.iter().enumerate() {
+            let block_index = block_index as BlockIndexType;
+
             let min_state_id = block.min_state_id.unwrap();
             let max_state_id = block.max_state_id.unwrap();
             for state_id in min_state_id..max_state_id + 1 {
-                state_id_to_block[state_id as usize] = block_index as BlockIndexType;
+                state_id_to_block[state_id as usize] = block_index;
             }
+
+            let name = block.name.clone();
+            name_to_block.insert(name, block_index);
         }
 
         Self {
             blocks,
             state_id_to_block,
+            name_to_block,
         }
     }
 
@@ -79,15 +93,15 @@ impl Blocks {
 
     /// Returns the [`Block`] with id `block_id`, or `None` if no such block exists.
     #[inline]
-    pub fn get_block_by_id(&self, block_id: BlockId) -> Option<&Block> {
+    pub fn get_by_id(&self, block_id: BlockId) -> Option<&Block> {
         // A block's id should always equal its minimum state id.
-        self.get_block_by_state_id(BlockStateId(block_id.0))
+        self.get_by_state_id(BlockStateId(block_id.0))
     }
 
     /// Returns the [`Block`] associated with block state `block_state_id`, or
     /// `None` if no such block exists.
     #[inline]
-    pub fn get_block_by_state_id(&self, block_state_id: BlockStateId) -> Option<&Block> {
+    pub fn get_by_state_id(&self, block_state_id: BlockStateId) -> Option<&Block> {
         let state_id = block_state_id.0;
         let block_index = self.state_id_to_block.get(state_id as usize)?;
 

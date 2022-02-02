@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 pub(crate) use minecraft_data_rs::api::Api;
 
@@ -9,18 +9,18 @@ use minecraft_data_rs::{
     models::version::Version as McVersion,
 };
 
-pub mod block;
+pub mod blocks;
 
-use block::Blocks;
+use blocks::Blocks;
 
 /// Provides access to all Minecraft data for a specific version.
 ///
 /// This type is intended to be initialized once at program startup and accessed
 /// by reference thereafter. Construction is **not** an inexpensive operation,
 /// but access **is** an inexpensive operation.
+#[derive(Clone)]
 pub struct MinecraftData {
-    pub blocks: Blocks,
-    pub version: Version,
+    inner: Arc<MinecraftDataInner>,
 }
 
 impl MinecraftData {
@@ -35,10 +35,25 @@ impl MinecraftData {
         let version = version.into();
         let api = Api::new(version.0.clone());
         Self {
-            blocks: Blocks::from_api(&api),
-            version,
+            inner: Arc::new(MinecraftDataInner {
+                blocks: Blocks::from_api(&api),
+                version,
+            }),
         }
     }
+
+    pub fn blocks(&self) -> &Blocks {
+        &self.inner.blocks
+    }
+
+    pub fn version(&self) -> &Version {
+        &self.inner.version
+    }
+}
+
+struct MinecraftDataInner {
+    pub blocks: Blocks,
+    pub version: Version,
 }
 
 /// Represents a version of the Minecraft game.

@@ -7,7 +7,7 @@ use minecraft_assets::{
     schemas::BlockStates,
 };
 
-use brine_data::{block::BlockStateId, MinecraftData};
+use brine_data::{blocks::BlockStateId, MinecraftData};
 use brine_voxel::texture::{BlockTextures, TextureBuilderPlugin};
 
 fn main() {
@@ -38,7 +38,7 @@ struct Atlas {
 fn get_texture_path(mc_data: &MinecraftData, block_state_id: BlockStateId) -> Option<PathBuf> {
     let assets = AssetPack::at_path("assets/1.14.4");
 
-    let block = mc_data.blocks.get_block_by_state_id(block_state_id)?;
+    let block = mc_data.blocks().get_by_state_id(block_state_id)?;
     let name = &block.name;
     let blockstates = assets.load_blockstates(name).ok()?;
 

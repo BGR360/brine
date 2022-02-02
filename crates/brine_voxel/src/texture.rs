@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use brine_data::{
-    block::{BlockStateId, Blocks},
+    blocks::{BlockStateId, Blocks},
     MinecraftData,
 };
 
@@ -17,7 +17,7 @@ const TEXTURES_PATH: &str = "1.14.4/assets/minecraft/textures/block/";
 const PLACEHOLDER_PATH: &str = "placeholder.png";
 
 pub fn get_texture_path(block_state: BlockStateId, blocks: &Blocks) -> Option<PathBuf> {
-    let block_name = &blocks.get_block_by_state_id(block_state)?.name;
+    let block_name = &blocks.get_by_state_id(block_state)?.name;
 
     let mut path = PathBuf::from(TEXTURES_PATH);
     path.push(format!("{}.png", block_name));
@@ -233,7 +233,7 @@ impl TextureBuilderPlugin {
 
             let atlas_handle =
                 block_textures.create_texture_atlas(block_states, &asset_server, |block_state| {
-                    get_texture_path(block_state, &mc_data.blocks)
+                    get_texture_path(block_state, mc_data.blocks())
                 });
 
             commands.entity(entity).insert(atlas_handle);
