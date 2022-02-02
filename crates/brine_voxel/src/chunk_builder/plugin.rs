@@ -161,7 +161,10 @@ where
                         {
                             parent
                                 .spawn()
-                                .insert_bundle(BuiltChunkSectionBundle::<T>::new(section.chunk_y))
+                                .insert_bundle(BuiltChunkSectionBundle::new(
+                                    T::TYPE,
+                                    section.chunk_y,
+                                ))
                                 .insert_bundle(PbrBundle {
                                     mesh: meshes.add(mesh.to_render_mesh()),
                                     ..Default::default()
@@ -178,18 +181,22 @@ where
 
     fn add_names(
         built_chunks: Query<(Entity, &BuiltChunk<T>), Added<BuiltChunk<T>>>,
-        built_sections: Query<(Entity, &BuiltChunkSection<T>), Added<BuiltChunkSection<T>>>,
+        built_sections: Query<(Entity, &BuiltChunkSection), Added<BuiltChunkSection>>,
         mut commands: Commands,
     ) {
         for (entity, built_chunk) in built_chunks.iter() {
-            commands
-                .entity(entity)
-                .insert(Name::new(built_chunk.to_string()));
+            if built_chunk.builder == T::TYPE {
+                commands
+                    .entity(entity)
+                    .insert(Name::new(built_chunk.to_string()));
+            }
         }
         for (entity, built_section) in built_sections.iter() {
-            commands
-                .entity(entity)
-                .insert(Name::new(built_section.to_string()));
+            if built_section.builder == T::TYPE {
+                commands
+                    .entity(entity)
+                    .insert(Name::new(built_section.to_string()));
+            }
         }
     }
 }

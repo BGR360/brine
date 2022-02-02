@@ -206,9 +206,11 @@ where
         app.add_system(Self::add_material);
 
         let position = self.position;
-        app.add_system(move |query: Query<&mut Transform, Added<BuiltChunk<T>>>| {
-            Self::move_and_rotate(query, position)
-        });
+        app.add_system(
+            move |query: Query<(&mut Transform, &BuiltChunk<T>), Added<BuiltChunk<T>>>| {
+                Self::move_and_rotate(query, position)
+            },
+        );
 
         app.add_system(Self::rotate_chunk);
     }
@@ -233,10 +235,15 @@ where
         }
     }
 
-    fn move_and_rotate(mut query: Query<&mut Transform, Added<BuiltChunk<T>>>, position: Vec3) {
-        for mut transform in query.iter_mut() {
-            transform.translation = position;
-            transform.rotate(Quat::from_rotation_y(PI / 4.0));
+    fn move_and_rotate(
+        mut query: Query<(&mut Transform, &BuiltChunk<T>), Added<BuiltChunk<T>>>,
+        position: Vec3,
+    ) {
+        for (mut transform, built_chunk) in query.iter_mut() {
+            if built_chunk.builder == T::TYPE {
+                transform.translation = position;
+                transform.rotate(Quat::from_rotation_y(PI / 4.0));
+            }
         }
     }
 
@@ -249,7 +256,7 @@ where
     }
 
     fn center_section_at_bottom_of_chunk(
-        mut query: Query<&mut Transform, Added<BuiltChunkSection<T>>>,
+        mut query: Query<&mut Transform, Added<BuiltChunkSection>>,
     ) {
         for mut transform in query.iter_mut() {
             transform.translation = Vec3::new(-8.0, -8.0, -8.0);

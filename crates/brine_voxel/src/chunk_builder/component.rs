@@ -56,23 +56,21 @@ unsafe impl<T> Sync for BuiltChunk<T> {}
 
 /// Component that signifies a built chunk section.
 #[derive(Component)]
-pub struct BuiltChunkSection<T> {
+pub struct BuiltChunkSection {
     pub builder: ChunkBuilderType,
     pub section_y: u8,
-    _phantom: PhantomData<T>,
 }
 
-impl<T> Default for BuiltChunkSection<T> {
+impl Default for BuiltChunkSection {
     fn default() -> Self {
         Self {
             builder: ChunkBuilderType::UNKNOWN,
             section_y: 0,
-            _phantom: PhantomData,
         }
     }
 }
 
-impl<T> fmt::Debug for BuiltChunkSection<T> {
+impl fmt::Debug for BuiltChunkSection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("BuiltChunkSection")
             .field(&self.builder)
@@ -81,15 +79,11 @@ impl<T> fmt::Debug for BuiltChunkSection<T> {
     }
 }
 
-impl<T> fmt::Display for BuiltChunkSection<T> {
+impl fmt::Display for BuiltChunkSection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Section {}", self.section_y)
     }
 }
-
-/// SAFETY: BuiltChunkSection is not inhabited.
-unsafe impl<T> Send for BuiltChunkSection<T> {}
-unsafe impl<T> Sync for BuiltChunkSection<T> {}
 
 #[derive(Debug, Default, Bundle)]
 pub struct BuiltChunkBundle<Builder: 'static> {
@@ -123,23 +117,16 @@ where
 }
 
 #[derive(Debug, Default, Bundle)]
-pub struct BuiltChunkSectionBundle<Builder: 'static> {
-    pub built_chunk_section: BuiltChunkSection<Builder>,
+pub struct BuiltChunkSectionBundle {
+    pub built_chunk_section: BuiltChunkSection,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
 
-impl<Builder: 'static> BuiltChunkSectionBundle<Builder>
-where
-    Builder: ChunkBuilder,
-{
-    pub fn new(section_y: u8) -> Self {
+impl BuiltChunkSectionBundle {
+    pub fn new(builder: ChunkBuilderType, section_y: u8) -> Self {
         Self {
-            built_chunk_section: BuiltChunkSection::<Builder> {
-                builder: Builder::TYPE,
-                section_y,
-                ..Default::default()
-            },
+            built_chunk_section: BuiltChunkSection { builder, section_y },
             transform: Transform::from_translation(Vec3::new(0.0, (section_y * 16) as f32, 0.0)),
             global_transform: GlobalTransform::default(),
         }
