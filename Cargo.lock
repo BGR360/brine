@@ -1125,11 +1125,11 @@ version = "0.0.0"
 dependencies = [
  "bevy",
  "block-mesh",
+ "brine_asset",
  "brine_chunk",
  "brine_data",
  "brine_proto",
  "futures-lite",
- "minecraft-assets",
 ]
 
 [[package]]

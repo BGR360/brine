@@ -14,4 +14,4 @@ brine_data = { path = "../brine_data" }
 brine_proto = { path = "../brine_proto" }
 
 [dev-dependencies]
-minecraft-assets = { path = "../minecraft-assets-rs" }
+brine_asset = { path = "../brine_asset" }

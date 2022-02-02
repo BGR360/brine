@@ -1,19 +1,18 @@
-use std::path::PathBuf;
-
 use bevy::prelude::*;
 
-use minecraft_assets::{
-    api::{AssetPack, ModelResolver, ResourceLocation},
-    schemas::BlockStates,
-};
+use brine_asset::MinecraftAssets;
 
 use brine_data::{blocks::BlockStateId, MinecraftData};
 use brine_voxel::texture::{BlockTextures, TextureBuilderPlugin};
 
 fn main() {
+    let mc_data = MinecraftData::for_version("1.14.4");
+    let mc_assets = MinecraftAssets::new("assets/1.14.4", &mc_data).unwrap();
+
     App::new()
         .add_plugins(DefaultPlugins)
-        .insert_resource(MinecraftData::for_version("1.14.4"))
+        .insert_resource(mc_data)
+        .insert_resource(mc_assets)
         .add_plugin(TextureBuilderPlugin)
         .add_state(AppState::Loading)
         .init_resource::<Atlas>()
@@ -35,45 +34,16 @@ struct Atlas {
     handle: Option<Handle<TextureAtlas>>,
 }
 
-fn get_texture_path(mc_data: &MinecraftData, block_state_id: BlockStateId) -> Option<PathBuf> {
-    let assets = AssetPack::at_path("assets/1.14.4");
-
-    let block = mc_data.blocks().get_by_state_id(block_state_id)?;
-    let name = &block.name;
-    let blockstates = assets.load_blockstates(name).ok()?;
-
-    let first_variant = match blockstates {
-        BlockStates::Variants { ref variants } => variants.values().next().unwrap(),
-        BlockStates::Multipart { ref cases } => &cases[0].apply,
-    };
-
-    let model_name = &first_variant.models()[0].model;
-
-    if model_name.contains("water") || model_name.contains("lava") || model_name.contains("fire") {
-        return None;
-    }
-
-    let models = assets.load_block_model_recursive(model_name).ok()?;
-
-    let model = ModelResolver::resolve_model(models.iter());
-
-    let texture = &model.textures.as_ref()?.values().next()?.0;
-
-    let path = assets.get_resource_path(&ResourceLocation::Texture(texture.into()));
-
-    Some(path.strip_prefix("assets").unwrap().into())
-}
-
 fn load_atlas(
-    mc_data: Res<MinecraftData>,
+    mc_assets: Res<MinecraftAssets>,
     asset_server: ResMut<AssetServer>,
     mut block_textures: ResMut<BlockTextures>,
     mut atlas: ResMut<Atlas>,
 ) {
-    let block_states = (1..1000).map(BlockStateId);
+    let block_states = (1..500).map(BlockStateId);
 
     let atlas_handle = block_textures.create_texture_atlas(block_states, &asset_server, |b| {
-        get_texture_path(&*mc_data, b)
+        mc_assets.textures().get_texture_path(b)
     });
 
     atlas.handle = Some(atlas_handle);
