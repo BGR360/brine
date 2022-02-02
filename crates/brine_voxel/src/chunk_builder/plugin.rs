@@ -7,11 +7,15 @@ use bevy::{
 };
 use futures_lite::future;
 
+use brine_chunk::Chunk;
 use brine_proto::event;
 
-use super::component::{BuiltChunk, BuiltChunkSection, Chunk};
+use super::component::{BuiltChunk, BuiltChunkSection, ChunkSection};
 
-use super::{AddToWorld, ChunkBuilder};
+use super::{
+    component::{BuiltChunkBundle, BuiltChunkSectionBundle},
+    ChunkBuilder, ChunkMeshes, SectionMesh,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemLabel)]
 pub enum System {
@@ -19,9 +23,7 @@ pub enum System {
     BuilderResultAddToWorld,
 }
 
-//const MAX_CHUNKS: usize = 3000;
-
-type ChunkBuilderTask<T> = Task<(Chunk, <T as ChunkBuilder>::Output)>;
+type ChunkBuilderTask<T> = Task<(Chunk, ChunkMeshes<T>)>;
 
 /// Plugin that asynchronously generates renderable entities from chunk data.
 ///
@@ -66,7 +68,6 @@ impl<T: ChunkBuilder> Default for ChunkBuilderPlugin<T> {
 impl<T> Plugin for ChunkBuilderPlugin<T>
 where
     T: ChunkBuilder + Default + Send + Sync + 'static,
-    <T as ChunkBuilder>::Output: Send + 'static,
 {
     fn build(&self, app: &mut App) {
         let mut systems = SystemSet::new();
@@ -88,7 +89,6 @@ where
 impl<T> ChunkBuilderPlugin<T>
 where
     T: ChunkBuilder + Default + Any + Send + Sync + 'static,
-    <T as ChunkBuilder>::Output: Send + 'static,
 {
     fn builder_task_spawn(
         current_chunk: &mut usize,
@@ -105,7 +105,7 @@ where
 
         let task: ChunkBuilderTask<T> = task_pool.spawn(async move {
             let built = T::default().build_chunk(&chunk);
-            (Chunk(chunk), built)
+            (chunk, built)
         });
 
         commands.spawn().insert(task);
@@ -149,9 +149,26 @@ where
             if let Some((chunk, built_chunk)) = future::block_on(future::poll_once(&mut *task)) {
                 debug!("Spawning chunk stuff");
 
-                let chunk_entity = built_chunk.add_to_world(&mut meshes, &mut commands);
-
-                commands.entity(chunk_entity).insert(chunk);
+                let meshes = &mut *meshes;
+                commands
+                    .spawn()
+                    .insert_bundle(BuiltChunkBundle::<T>::new(chunk.chunk_x, chunk.chunk_z))
+                    .with_children(move |parent| {
+                        for (section, SectionMesh { mesh, .. }) in chunk
+                            .sections
+                            .into_iter()
+                            .zip(built_chunk.sections.into_iter())
+                        {
+                            parent
+                                .spawn()
+                                .insert_bundle(BuiltChunkSectionBundle::<T>::new(section.chunk_y))
+                                .insert_bundle(PbrBundle {
+                                    mesh: meshes.add(mesh.to_render_mesh()),
+                                    ..Default::default()
+                                })
+                                .insert(ChunkSection(section));
+                        }
+                    });
 
                 // Task is complete, so remove task component from entity
                 commands.entity(task_entity).remove::<ChunkBuilderTask<T>>();

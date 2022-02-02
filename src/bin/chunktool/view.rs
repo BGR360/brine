@@ -15,7 +15,7 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 use brine_chunk::{Chunk, ChunkSection};
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection, Chunk as ChunkComponent},
+    component::{BuiltChunk, BuiltChunkSection, ChunkMarker},
     ChunkBuilder, ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
     VisibleFacesChunkBuilder,
 };
@@ -159,7 +159,7 @@ fn load_next_chunk(
     input: Res<Input<KeyCode>>,
     mut chunks: ResMut<Chunks>,
     mut chunk_events: EventWriter<event::clientbound::ChunkData>,
-    query: Query<Entity, With<ChunkComponent>>,
+    query: Query<Entity, With<ChunkMarker>>,
     mut commands: Commands,
 ) -> Result<()> {
     let should_show_next =
@@ -198,7 +198,6 @@ struct ChunkViewerPlugin<T> {
 impl<T> Plugin for ChunkViewerPlugin<T>
 where
     T: ChunkBuilder + Default + Send + Sync + 'static,
-    <T as ChunkBuilder>::Output: Send,
 {
     fn build(&self, app: &mut App) {
         app.add_plugin(ChunkBuilderPlugin::<T>::shared());

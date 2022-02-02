@@ -14,5 +14,5 @@ pub mod mesh;
 pub mod texture;
 
 pub use chunk_builder::{
-    AddToWorld, ChunkBuilder, ChunkBuilderPlugin, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
+    ChunkBuilder, ChunkBuilderPlugin, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
 };

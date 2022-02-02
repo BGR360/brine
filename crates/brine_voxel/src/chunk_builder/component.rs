@@ -2,9 +2,13 @@ use std::{fmt, marker::PhantomData};
 
 use bevy::prelude::*;
 
-/// Component that stores the original chunk data for a chunk.
+/// Component that marks the parent entity of a chunk column.
+#[derive(Component, Debug, Default, Clone, Copy)]
+pub struct ChunkMarker;
+
+/// Component that stores the original chunk data for a chunk section.
 #[derive(Component)]
-pub struct Chunk(pub brine_chunk::Chunk);
+pub struct ChunkSection(pub brine_chunk::ChunkSection);
 
 /// Component that signifies a built chunk.
 ///
@@ -96,6 +100,7 @@ pub struct BuiltChunkBundle<Builder: 'static> {
     pub built_chunk: BuiltChunk<Builder>,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
+    pub chunk: ChunkMarker,
 }
 
 impl<Builder: 'static> BuiltChunkBundle<Builder> {
@@ -107,7 +112,8 @@ impl<Builder: 'static> BuiltChunkBundle<Builder> {
                 0.0,
                 (chunk_z * 16) as f32,
             )),
-            global_transform: GlobalTransform::default(),
+            global_transform: Default::default(),
+            chunk: Default::default(),
         }
     }
 }

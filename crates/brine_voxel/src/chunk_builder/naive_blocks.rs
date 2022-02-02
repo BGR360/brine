@@ -126,8 +126,6 @@ impl NaiveBlocksChunkBuilder {
 }
 
 impl ChunkBuilder for NaiveBlocksChunkBuilder {
-    type Output = ChunkMeshes<Self>;
-
     fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }

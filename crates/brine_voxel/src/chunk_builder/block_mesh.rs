@@ -54,9 +54,7 @@ impl VisibleFacesChunkBuilder {
 }
 
 impl ChunkBuilder for VisibleFacesChunkBuilder {
-    type Output = ChunkMeshes<Self>;
-
-    fn build_chunk(&self, chunk: &Chunk) -> Self::Output {
+    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }
 }
@@ -100,9 +98,7 @@ impl GreedyQuadsChunkBuilder {
 }
 
 impl ChunkBuilder for GreedyQuadsChunkBuilder {
-    type Output = ChunkMeshes<Self>;
-
-    fn build_chunk(&self, chunk: &Chunk) -> Self::Output {
+    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }
 }

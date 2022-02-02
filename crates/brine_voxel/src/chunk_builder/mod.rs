@@ -11,8 +11,6 @@
 
 use std::marker::PhantomData;
 
-use bevy::prelude::*;
-
 use brine_chunk::Chunk;
 
 mod block_mesh;
@@ -26,29 +24,13 @@ pub use self::block_mesh::{GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder};
 pub use naive_blocks::NaiveBlocksChunkBuilder;
 pub use plugin::ChunkBuilderPlugin;
 
-use component::{BuiltChunkBundle, BuiltChunkSectionBundle};
-
-pub trait AddToWorld {
-    fn add_to_world(self, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Entity;
-}
-
 /// A trait for types that can turn a [`Chunk`] into a renderable representation
 /// that can be added to a Bevy world.
 ///
 /// See the [module documentation][self] for more information.
-pub trait ChunkBuilder {
-    /// The output type must implement [`AddToWorld`] so that it can be added to
-    /// the world once the build process completes.
-    ///
-    /// Implementations should insert the [`BuiltChunk`] and [`BuiltChunkSection`]
-    /// components onto the appropriate entities when `add_to_world` is called.
-    ///
-    /// [`BuiltChunk`]: component::BuiltChunk
-    /// [`BuiltChunkSection`]: component::BuiltChunkSection
-    type Output: AddToWorld;
-
+pub trait ChunkBuilder: Sized {
     /// Generates the output data from the provided chunk data.
-    fn build_chunk(&self, chunk: &Chunk) -> Self::Output;
+    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self>;
 }
 
 /// The output of a chunk builder.
@@ -63,27 +45,4 @@ pub struct ChunkMeshes<Builder> {
 pub struct SectionMesh {
     pub section_y: u8,
     pub mesh: VoxelMesh,
-}
-
-impl<Builder> AddToWorld for ChunkMeshes<Builder>
-where
-    Builder: 'static,
-{
-    fn add_to_world<'w, 's>(self, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Entity {
-        commands
-            .spawn()
-            .insert_bundle(BuiltChunkBundle::<Builder>::new(self.chunk_x, self.chunk_z))
-            .with_children(move |parent| {
-                for section in self.sections.into_iter() {
-                    parent
-                        .spawn()
-                        .insert_bundle(BuiltChunkSectionBundle::<Builder>::new(section.section_y))
-                        .insert_bundle(PbrBundle {
-                            mesh: meshes.add(section.mesh.to_render_mesh()),
-                            ..Default::default()
-                        });
-                }
-            })
-            .id()
-    }
 }
