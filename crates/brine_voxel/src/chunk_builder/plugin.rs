@@ -152,7 +152,7 @@ where
                 let meshes = &mut *meshes;
                 commands
                     .spawn()
-                    .insert_bundle(BuiltChunkBundle::<T>::new(chunk.chunk_x, chunk.chunk_z))
+                    .insert_bundle(BuiltChunkBundle::new(T::TYPE, chunk.chunk_x, chunk.chunk_z))
                     .with_children(move |parent| {
                         for (section, SectionMesh { mesh, .. }) in chunk
                             .sections
@@ -180,7 +180,7 @@ where
     }
 
     fn add_names(
-        built_chunks: Query<(Entity, &BuiltChunk<T>), Added<BuiltChunk<T>>>,
+        built_chunks: Query<(Entity, &BuiltChunk), Added<BuiltChunk>>,
         built_sections: Query<(Entity, &BuiltChunkSection), Added<BuiltChunkSection>>,
         mut commands: Commands,
     ) {

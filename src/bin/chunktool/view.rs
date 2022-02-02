@@ -1,6 +1,5 @@
 use std::{
     f32::consts::PI,
-    marker::PhantomData,
     path::{Path, PathBuf},
 };
 
@@ -15,9 +14,8 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 use brine_chunk::{Chunk, ChunkSection};
 use brine_proto::{event, ProtocolPlugin};
 use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection, ChunkMarker},
-    ChunkBuilder, ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
-    VisibleFacesChunkBuilder,
+    component::{BuiltChunk, BuiltChunkSection},
+    ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
 };
 
 use brine::{
@@ -127,16 +125,18 @@ pub fn main(args: Args) {
     .add_plugin(WorldInspectorPlugin::new())
     .add_plugin(ProtocolPlugin);
 
-    app.add_plugin(ChunkViewerPlugin::<NaiveBlocksChunkBuilder>::on_left());
+    app.add_plugin(ChunkBuilderPlugin::<NaiveBlocksChunkBuilder>::shared());
 
     match args.builder {
         ChunkBuilderType::VisibleFaces => {
-            app.add_plugin(ChunkViewerPlugin::<VisibleFacesChunkBuilder>::on_right());
+            app.add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::shared());
         }
         ChunkBuilderType::GreedyQuads => {
-            app.add_plugin(ChunkViewerPlugin::<GreedyQuadsChunkBuilder>::on_right());
+            app.add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::shared());
         }
     }
+
+    app.add_plugin(ChunkViewerPlugin);
 
     app.add_startup_system(load_first_chunk.chain(log_error))
         .add_startup_system(set_up_camera)
@@ -159,7 +159,7 @@ fn load_next_chunk(
     input: Res<Input<KeyCode>>,
     mut chunks: ResMut<Chunks>,
     mut chunk_events: EventWriter<event::clientbound::ChunkData>,
-    query: Query<Entity, With<ChunkMarker>>,
+    query: Query<Entity, With<BuiltChunk>>,
     mut commands: Commands,
 ) -> Result<()> {
     let should_show_next =
@@ -189,67 +189,38 @@ fn set_up_camera(mut commands: Commands) {
     });
 }
 
-struct ChunkViewerPlugin<T> {
-    position: Vec3,
+struct ChunkViewerPlugin;
 
-    _phantom: PhantomData<T>,
-}
-
-impl<T> Plugin for ChunkViewerPlugin<T>
-where
-    T: ChunkBuilder + Default + Send + Sync + 'static,
-{
+impl Plugin for ChunkViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(ChunkBuilderPlugin::<T>::shared());
         app.add_system(Self::center_section_at_bottom_of_chunk);
         app.add_system(Self::rename_chunks);
         app.add_system(Self::add_material);
-
-        let position = self.position;
-        app.add_system(
-            move |query: Query<(&mut Transform, &BuiltChunk<T>), Added<BuiltChunk<T>>>| {
-                Self::move_and_rotate(query, position)
-            },
-        );
-
+        app.add_system(Self::move_and_rotate);
         app.add_system(Self::rotate_chunk);
     }
 }
 
-impl<T> ChunkViewerPlugin<T>
-where
-    T: ChunkBuilder + Send + Sync + 'static,
-{
-    pub fn on_left() -> Self {
-        Self::at_position(-Vec3::X * DISTANCE_FROM_ORIGIN)
-    }
-
-    pub fn on_right() -> Self {
-        Self::at_position(Vec3::X * DISTANCE_FROM_ORIGIN)
-    }
-
-    pub fn at_position(position: Vec3) -> Self {
-        Self {
-            position,
-            _phantom: PhantomData,
-        }
-    }
-
-    fn move_and_rotate(
-        mut query: Query<(&mut Transform, &BuiltChunk<T>), Added<BuiltChunk<T>>>,
-        position: Vec3,
-    ) {
+impl ChunkViewerPlugin {
+    fn move_and_rotate(mut query: Query<(&mut Transform, &BuiltChunk), Added<BuiltChunk>>) {
         for (mut transform, built_chunk) in query.iter_mut() {
-            if built_chunk.builder == T::TYPE {
-                transform.translation = position;
-                transform.rotate(Quat::from_rotation_y(PI / 4.0));
+            transform.rotate(Quat::from_rotation_y(PI / 4.0));
+
+            use brine_voxel::chunk_builder::ChunkBuilderType;
+            match built_chunk.builder {
+                ChunkBuilderType::NAIVE_BLOCKS => {
+                    transform.translation = -Vec3::X * DISTANCE_FROM_ORIGIN;
+                }
+                _ => {
+                    transform.translation = Vec3::X * DISTANCE_FROM_ORIGIN;
+                }
             }
         }
     }
 
-    fn rename_chunks(mut query: Query<&mut Name, (With<BuiltChunk<T>>, Added<Name>)>) {
-        let builder_name = std::any::type_name::<T>().split("::").last().unwrap();
-        for mut name in query.iter_mut() {
+    fn rename_chunks(mut query: Query<(&mut Name, &BuiltChunk), Added<Name>>) {
+        for (mut name, built_chunk) in query.iter_mut() {
+            let builder_name = built_chunk.builder.0;
             let new_name = format!("{} ({})", **name, builder_name);
             name.set(new_name);
         }
@@ -282,7 +253,7 @@ where
 
     fn rotate_chunk(
         input: Res<Input<KeyCode>>,
-        mut query: Query<&mut Transform, With<BuiltChunk<T>>>,
+        mut query: Query<&mut Transform, With<BuiltChunk>>,
     ) {
         for mut transform in query.iter_mut() {
             for keypress in input.get_just_pressed() {

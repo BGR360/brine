@@ -45,6 +45,12 @@ impl ChunkBuilderType {
     pub const NAIVE_BLOCKS: Self = Self("NaiveBlocksChunkBuilder");
 }
 
+impl Default for ChunkBuilderType {
+    fn default() -> Self {
+        Self::UNKNOWN
+    }
+}
+
 impl fmt::Debug for ChunkBuilderType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(self.0).finish()
