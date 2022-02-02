@@ -21,6 +21,12 @@ pub enum Axis {
     ZNeg = 5,
 }
 
+impl Default for Axis {
+    fn default() -> Self {
+        Self::XPos
+    }
+}
+
 impl Axis {
     pub const fn normal(&self) -> [i8; 3] {
         match self {
@@ -35,7 +41,7 @@ impl Axis {
 }
 
 /// A mesh made up of one or more voxels.
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct VoxelMesh {
     /// A list of faces that make up the mesh.
     pub faces: Vec<VoxelFace>,
@@ -44,7 +50,7 @@ pub struct VoxelMesh {
 }
 
 /// A single face in a [`VoxelMesh`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct VoxelFace {
     /// The [x, y, z] index of the voxel that contains this face.
     pub voxel: [u8; 3],

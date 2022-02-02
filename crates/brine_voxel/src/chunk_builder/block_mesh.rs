@@ -2,10 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{
-    prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
-};
+use bevy::prelude::*;
 use block_mesh::{
     ndshape::{ConstShape3u32, Shape},
     GreedyQuadsBuffer, MergeVoxel, OrientedBlockFace, UnitQuadBuffer, UnorientedQuad, Voxel,
@@ -14,55 +11,9 @@ use block_mesh::{
 
 use brine_chunk::{Chunk, ChunkSection, SECTION_WIDTH};
 
-use crate::chunk_builder::AddToWorld;
+use crate::mesh::{Axis, VoxelFace, VoxelMesh};
 
-use super::{
-    component::{BuiltChunkBundle, BuiltChunkSectionBundle},
-    ChunkBuilder,
-};
-
-/// The output of [`VisibleFacesChunkBuilder`] and [`GreedyQuadsChunkBuilder`].
-pub struct ChunkMeshes<Builder> {
-    pub chunk_x: i32,
-    pub chunk_z: i32,
-    pub sections: Vec<SectionMesh>,
-
-    _phantom: PhantomData<Builder>,
-}
-
-pub struct SectionMesh {
-    pub section_y: u8,
-    pub mesh: Mesh,
-}
-
-impl<Builder> AddToWorld for ChunkMeshes<Builder>
-where
-    Builder: 'static,
-{
-    fn add_to_world<'w, 's>(self, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Entity {
-        commands
-            .spawn()
-            .insert_bundle(BuiltChunkBundle::<Builder>::new(self.chunk_x, self.chunk_z))
-            .with_children(move |parent| {
-                for section in self.sections.into_iter() {
-                    parent
-                        .spawn()
-                        .insert_bundle(BuiltChunkSectionBundle::<Builder>::new(section.section_y))
-                        .with_children(|parent| {
-                            parent.spawn().insert_bundle(PbrBundle {
-                                mesh: meshes.add(section.mesh),
-                                // material: material.clone(),
-                                // Mesh needs to be offset by [-1, -1, -1] to be
-                                // properly aligned.
-                                transform: Transform::from_translation(Vec3::new(-1.0, -1.0, -1.0)),
-                                ..Default::default()
-                            });
-                        });
-                }
-            })
-            .id()
-    }
-}
+use super::{ChunkBuilder, ChunkMeshes, SectionMesh};
 
 /// A [`ChunkBuilder`] that uses the [`visible_block_faces`] algorithm from the
 /// [`block_mesh`] crate to build chunks.
@@ -220,63 +171,62 @@ impl BlockMeshBuilder {
 
         let output = func(self);
 
-        let render_mesh = self.generate_mesh(output);
+        let voxel_mesh = self.generate_voxel_mesh(output);
+
+        let section = SectionMesh {
+            section_y: chunk_section.chunk_y,
+            mesh: voxel_mesh,
+        };
 
         debug!("built chunk");
-        trace!(
-            "mesh vertices: {:?}",
-            render_mesh.attribute("Vertex_Position").unwrap()
-        );
 
-        SectionMesh {
-            section_y: chunk_section.chunk_y,
-            mesh: render_mesh,
+        section
+    }
+
+    fn generate_voxel_mesh(&self, output: BlockMeshOutput) -> VoxelMesh {
+        let num_faces = output.num_quads();
+        let mut faces = Vec::with_capacity(num_faces);
+
+        let mut block_states = Vec::new();
+
+        output.for_each_quad_and_face(&self.faces, |quad, face| {
+            let voxel = quad.minimum.map(|elt| elt as u8);
+            let axis = Self::get_axis(face);
+            // Mesh needs to be offset by [-1, -1, -1] to be properly aligned.
+            let positions = face
+                .quad_mesh_positions(&quad, 1.0)
+                .map(|[x, y, z]| [x - 1.0, y - 1.0, z - 1.0]);
+            let tex_coords = face.tex_coords(RIGHT_HANDED_Y_UP_CONFIG.u_flip_face, true, &quad);
+            let indices = face.quad_mesh_indices(0).map(|i| i as u8);
+
+            faces.push(VoxelFace {
+                voxel,
+                axis,
+                positions,
+                tex_coords,
+                indices,
+            });
+
+            let block_state = self.voxels[self.shape.linearize(quad.minimum) as usize];
+            block_states.push(block_state.0);
+        });
+
+        VoxelMesh {
+            faces,
+            voxel_values: block_states,
         }
     }
 
-    fn generate_mesh(&self, output: BlockMeshOutput) -> Mesh {
-        let num_indices = output.num_quads() * 6;
-        let num_vertices = output.num_quads() * 4;
-        let mut indices = Vec::with_capacity(num_indices);
-        let mut positions = Vec::with_capacity(num_vertices);
-        let mut normals = Vec::with_capacity(num_vertices);
-        let mut tex_coords = Vec::with_capacity(num_vertices);
-
-        output.for_each_quad_and_face(&self.faces, |quad, face| {
-            indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
-            positions.extend_from_slice(&face.quad_mesh_positions(&quad, 1.0));
-            normals.extend_from_slice(&face.quad_mesh_normals());
-
-            // Get tex coords.
-            let block_index = quad.minimum;
-            let block_state = self.voxels[self.shape.linearize(block_index) as usize];
-            let coords = self.get_tex_coords(&quad, face, block_state);
-            tex_coords.extend_from_slice(&coords);
-        });
-
-        let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        render_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        render_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        render_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
-        render_mesh.set_indices(Some(Indices::U32(indices)));
-
-        render_mesh
-    }
-
-    fn get_tex_coords(
-        &self,
-        quad: &UnorientedQuad,
-        face: &OrientedBlockFace,
-        block_state: BlockState,
-    ) -> [[f32; 2]; 4] {
-        let tex_coords = face.tex_coords(RIGHT_HANDED_Y_UP_CONFIG.u_flip_face, true, quad);
-
-        let index = block_state.0 .0 as usize % 256;
-
-        let u0 = index / 16;
-        let v0 = index % 16;
-
-        tex_coords.map(|[u, v]| [(u + u0 as f32) / 16.0, (v + v0 as f32) / 16.0])
+    fn get_axis(face: &OrientedBlockFace) -> Axis {
+        match face.signed_normal().to_array() {
+            [1, 0, 0] => Axis::XPos,
+            [-1, 0, 0] => Axis::XNeg,
+            [0, 1, 0] => Axis::YPos,
+            [0, -1, 0] => Axis::YNeg,
+            [0, 0, 1] => Axis::ZPos,
+            [0, 0, -1] => Axis::ZNeg,
+            _ => unreachable!(),
+        }
     }
 }
 
