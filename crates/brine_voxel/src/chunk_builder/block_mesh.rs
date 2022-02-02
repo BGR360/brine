@@ -11,7 +11,10 @@ use block_mesh::{
 
 use brine_chunk::{Chunk, ChunkSection, SECTION_WIDTH};
 
-use crate::mesh::{Axis, VoxelFace, VoxelMesh};
+use crate::{
+    chunk_builder::ChunkBuilderType,
+    mesh::{Axis, VoxelFace, VoxelMesh},
+};
 
 use super::{ChunkBuilder, ChunkMeshes, SectionMesh};
 
@@ -54,6 +57,8 @@ impl VisibleFacesChunkBuilder {
 }
 
 impl ChunkBuilder for VisibleFacesChunkBuilder {
+    const TYPE: ChunkBuilderType = ChunkBuilderType::VISIBLE_FACES;
+
     fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }
@@ -98,6 +103,8 @@ impl GreedyQuadsChunkBuilder {
 }
 
 impl ChunkBuilder for GreedyQuadsChunkBuilder {
+    const TYPE: ChunkBuilderType = ChunkBuilderType::GREEDY_QUADS;
+
     fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }

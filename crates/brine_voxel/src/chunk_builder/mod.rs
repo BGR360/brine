@@ -9,7 +9,7 @@
 //! various assets. See the [`ChunkBuilder`] docs for details on how this is
 //! dealt with.
 
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use brine_chunk::Chunk;
 
@@ -29,8 +29,26 @@ pub use plugin::ChunkBuilderPlugin;
 ///
 /// See the [module documentation][self] for more information.
 pub trait ChunkBuilder: Sized {
+    const TYPE: ChunkBuilderType;
+
     /// Generates the output data from the provided chunk data.
     fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self>;
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ChunkBuilderType(pub &'static str);
+
+impl ChunkBuilderType {
+    pub const UNKNOWN: Self = Self("UNKNOWN_CHUNK_BUILDER");
+    pub const GREEDY_QUADS: Self = Self("GreedyQuadsChunkBuilder");
+    pub const VISIBLE_FACES: Self = Self("VisibleFacesChunkBuilder");
+    pub const NAIVE_BLOCKS: Self = Self("NaiveBlocksChunkBuilder");
+}
+
+impl fmt::Debug for ChunkBuilderType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct(self.0).finish()
+    }
 }
 
 /// The output of a chunk builder.

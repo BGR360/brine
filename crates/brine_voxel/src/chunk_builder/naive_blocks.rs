@@ -11,7 +11,7 @@ use brine_chunk::{BlockState, Chunk, ChunkSection};
 
 use crate::mesh::{Axis, VoxelFace, VoxelMesh};
 
-use super::{ChunkBuilder, ChunkMeshes, SectionMesh};
+use super::{ChunkBuilder, ChunkBuilderType, ChunkMeshes, SectionMesh};
 
 /// A [`ChunkBuilder`] that just generates a cube mesh for each block.
 #[derive(Default)]
@@ -126,6 +126,8 @@ impl NaiveBlocksChunkBuilder {
 }
 
 impl ChunkBuilder for NaiveBlocksChunkBuilder {
+    const TYPE: ChunkBuilderType = ChunkBuilderType::NAIVE_BLOCKS;
+
     fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
         Self::build_chunk(chunk)
     }
