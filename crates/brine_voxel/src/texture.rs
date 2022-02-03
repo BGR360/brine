@@ -3,15 +3,10 @@ use std::{collections::hash_map::Entry, path::PathBuf};
 use bevy::{
     asset::{AssetPath, HandleId, LoadState},
     prelude::*,
-    utils::{HashMap, HashSet},
+    utils::HashMap,
 };
 
-use brine_data::{
-    blocks::{BlockStateId, Blocks},
-    MinecraftData,
-};
-
-use crate::mesh::VoxelMesh;
+use brine_data::blocks::{BlockStateId, Blocks};
 
 const TEXTURES_PATH: &str = "1.14.4/assets/minecraft/textures/block/";
 const PLACEHOLDER_PATH: &str = "placeholder.png";
@@ -26,7 +21,10 @@ pub fn get_texture_path(block_state: BlockStateId, blocks: &Blocks) -> Option<Pa
 }
 
 struct PendingAtlas {
+    /// Strong handle to each texture that will eventually be added to the atlas.
     textures: Vec<Handle<Image>>,
+
+    /// Strong handle that we will eventually populate with a built atlas.
     handle: Handle<TextureAtlas>,
 }
 
@@ -201,7 +199,7 @@ impl Plugin for TextureBuilderPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BlockTextures>();
         app.add_startup_system(Self::load_placeholder_texture);
-        app.add_system(Self::create_texture_atlases);
+        //app.add_system(Self::create_texture_atlases);
         app.add_system(Self::finish_texture_atlases);
     }
 }
@@ -213,39 +211,6 @@ impl TextureBuilderPlugin {
         asset_server: Res<AssetServer>,
     ) {
         block_textures.placeholder_texture = asset_server.load(PLACEHOLDER_PATH);
-    }
-
-    /// This system iterates through all newly created [`VoxelMesh`]es and kicks
-    /// off the creation of a [`TextureAtlas`] for each one. A
-    /// [`Handle<TextureAtlas>`] is inserted on each entity processed by this
-    /// system.
-    #[allow(clippy::type_complexity)]
-    fn create_texture_atlases(
-        query: Query<(Entity, &VoxelMesh), (Added<VoxelMesh>, Without<Handle<StandardMaterial>>)>,
-        mc_data: Res<MinecraftData>,
-        mut block_textures: ResMut<BlockTextures>,
-        asset_server: Res<AssetServer>,
-        mut commands: Commands,
-    ) {
-        for (entity, mesh) in query.iter() {
-            // Get all the unique block states that are present in this mesh.
-            let block_states = Self::get_block_states_in_mesh(mesh);
-
-            let atlas_handle =
-                block_textures.create_texture_atlas(block_states, &asset_server, |block_state| {
-                    get_texture_path(block_state, mc_data.blocks())
-                });
-
-            commands.entity(entity).insert(atlas_handle);
-        }
-    }
-
-    fn get_block_states_in_mesh(mesh: &VoxelMesh) -> HashSet<BlockStateId> {
-        let mut block_states_in_mesh = HashSet::default();
-        for block_state in mesh.voxel_values.iter() {
-            block_states_in_mesh.insert(BlockStateId(block_state.0 as u16));
-        }
-        block_states_in_mesh
     }
 
     /// This system calls [`BlockTextures::finish_texture_atlases`] once per

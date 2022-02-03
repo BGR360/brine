@@ -1,15 +1,28 @@
 use std::fmt;
 
-use bevy::{prelude::*, tasks::Task};
+use bevy::prelude::*;
 
 use crate::mesh::VoxelMesh;
 
 use super::ChunkBuilderType;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct PendingChunk {
-    pub task: Task<(brine_chunk::Chunk, Vec<VoxelMesh>)>,
     pub builder: ChunkBuilderType,
+
+    pub chunk_data: Option<brine_chunk::Chunk>,
+    pub voxel_meshes: Option<Vec<VoxelMesh>>,
+
+    pub texture_atlases: Option<Vec<Handle<TextureAtlas>>>,
+}
+
+impl PendingChunk {
+    pub fn new(builder: ChunkBuilderType) -> Self {
+        Self {
+            builder,
+            ..Default::default()
+        }
+    }
 }
 
 /// Component that stores the original chunk data for a chunk section.

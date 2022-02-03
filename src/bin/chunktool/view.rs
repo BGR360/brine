@@ -11,11 +11,17 @@ use bevy::{
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
 
+use brine_asset::MinecraftAssets;
 use brine_chunk::{Chunk, ChunkSection};
+use brine_data::MinecraftData;
 use brine_proto::{event, ProtocolPlugin};
-use brine_voxel::chunk_builder::{
-    component::{BuiltChunk, BuiltChunkSection},
-    ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder, VisibleFacesChunkBuilder,
+use brine_voxel::{
+    chunk_builder::{
+        component::{BuiltChunk, BuiltChunkSection},
+        ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
+        VisibleFacesChunkBuilder,
+    },
+    texture::TextureBuilderPlugin,
 };
 
 use brine::{
@@ -125,6 +131,12 @@ pub fn main(args: Args) {
     .add_plugin(WorldInspectorPlugin::new())
     .add_plugin(ProtocolPlugin);
 
+    let mc_data = MinecraftData::for_version("1.14.4");
+    let mc_assets = MinecraftAssets::new("assets/1.14.4", &mc_data).unwrap();
+    app.insert_resource(mc_data);
+    app.insert_resource(mc_assets);
+    app.add_plugin(TextureBuilderPlugin);
+
     app.add_plugin(ChunkBuilderPlugin::<NaiveBlocksChunkBuilder>::shared());
 
     match args.builder {
@@ -195,7 +207,7 @@ impl Plugin for ChunkViewerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(Self::center_section_at_bottom_of_chunk);
         app.add_system(Self::rename_chunks);
-        app.add_system(Self::add_material);
+        //app.add_system(Self::add_material);
         app.add_system(Self::move_and_rotate);
         app.add_system(Self::rotate_chunk);
     }

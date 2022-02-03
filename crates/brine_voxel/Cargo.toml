@@ -9,9 +9,7 @@ bevy = { version = "0.6" }
 block-mesh = "0.1"
 futures-lite = "1"
 
+brine_asset = { path = "../brine_asset" }
 brine_chunk = { path = "../brine_chunk" }
 brine_data = { path = "../brine_data" }
 brine_proto = { path = "../brine_proto" }
-
-[dev-dependencies]
-brine_asset = { path = "../brine_asset" }

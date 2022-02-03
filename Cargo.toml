@@ -27,7 +27,9 @@ serde_json = "1"
 steven_protocol = { path = "./third_party/stevenarella/protocol", default-features = false }
 thiserror = "1"
 
+brine_asset = { path = "./crates/brine_asset" }
 brine_chunk = { path = "./crates/brine_chunk" }
+brine_data = { path = "./crates/brine_data" }
 brine_net = { path = "./crates/brine_net" }
 brine_proto = { path = "./crates/brine_proto" }
 brine_proto_backend = { path = "./crates/brine_proto_backend" }
