@@ -21,8 +21,8 @@ only later realized that it was short for
 
 ## Docs
 
-I take care to write good rustdocs for all my code. Generate and view them like
-so:
+I take care to write good rustdocs for my code as much as possible. Generate and
+view them like so:
 
 ```
 cargo doc --workspace --no-deps --open
