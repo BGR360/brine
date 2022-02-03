@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use brine_asset::MinecraftAssets;
+use brine_asset::{blocks::BlockFace, MinecraftAssets};
 
 use brine_data::{blocks::BlockStateId, MinecraftData};
 use brine_voxel::texture::{BlockTextures, TextureBuilderPlugin};
@@ -43,7 +43,7 @@ fn load_atlas(
     let block_states = (1..500).map(BlockStateId);
 
     let atlas_handle = block_textures.create_texture_atlas(block_states, &asset_server, |b| {
-        mc_assets.textures().get_texture_path(b)
+        mc_assets.textures().get_texture_path(b, BlockFace::South)
     });
 
     atlas.handle = Some(atlas_handle);

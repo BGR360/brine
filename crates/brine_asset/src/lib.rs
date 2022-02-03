@@ -10,8 +10,8 @@ pub use brine_data::{
     Version,
 };
 
-mod blocks;
-mod textures;
+pub mod blocks;
+pub mod textures;
 
 pub use blocks::Blocks;
 pub use textures::Textures;

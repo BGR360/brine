@@ -8,6 +8,8 @@ use brine_data::{
     MinecraftData,
 };
 
+pub use minecraft_assets::schemas::models::BlockFace;
+
 pub struct Blocks {
     data: MinecraftData,
     block_states: Vec<BlockStates>,
