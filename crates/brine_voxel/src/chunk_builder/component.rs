@@ -1,8 +1,16 @@
 use std::fmt;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, tasks::Task};
+
+use crate::mesh::VoxelMesh;
 
 use super::ChunkBuilderType;
+
+#[derive(Component)]
+pub struct PendingChunk {
+    pub task: Task<(brine_chunk::Chunk, Vec<VoxelMesh>)>,
+    pub builder: ChunkBuilderType,
+}
 
 /// Component that stores the original chunk data for a chunk section.
 #[derive(Component)]
@@ -40,18 +48,24 @@ impl fmt::Display for BuiltChunkSection {
 #[derive(Debug, Default, Bundle)]
 pub struct BuiltChunkBundle {
     pub built_chunk: BuiltChunk,
+    pub name: Name,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
 
 impl BuiltChunkBundle {
     pub fn new(builder: ChunkBuilderType, chunk_x: i32, chunk_z: i32) -> Self {
+        let built_chunk = BuiltChunk {
+            builder,
+            chunk_x,
+            chunk_z,
+        };
+
+        let name = Name::new(built_chunk.to_string());
+
         Self {
-            built_chunk: BuiltChunk {
-                builder,
-                chunk_x,
-                chunk_z,
-            },
+            built_chunk,
+            name,
             transform: Transform::from_translation(Vec3::new(
                 (chunk_x * 16) as f32,
                 0.0,
@@ -65,14 +79,20 @@ impl BuiltChunkBundle {
 #[derive(Debug, Default, Bundle)]
 pub struct BuiltChunkSectionBundle {
     pub built_chunk_section: BuiltChunkSection,
+    pub name: Name,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
 
 impl BuiltChunkSectionBundle {
     pub fn new(builder: ChunkBuilderType, section_y: u8) -> Self {
+        let built_chunk_section = BuiltChunkSection { builder, section_y };
+
+        let name = Name::new(built_chunk_section.to_string());
+
         Self {
-            built_chunk_section: BuiltChunkSection { builder, section_y },
+            built_chunk_section,
+            name,
             transform: Transform::from_translation(Vec3::new(0.0, (section_y * 16) as f32, 0.0)),
             global_transform: GlobalTransform::default(),
         }

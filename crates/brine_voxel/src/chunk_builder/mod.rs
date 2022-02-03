@@ -1,15 +1,10 @@
 //! Generating renderable content from chunk data.
 //!
 //! Chunk building is the process of taking a chunk's data and turning it into
-//! meshes and materials and such.
-//!
-//! This process is designed to happen asynchronously outside of the main game
-//! loop. This makes things slightly awkward in that the chunk builders don't
-//! have access to the game world in order to create, access, or register
-//! various assets. See the [`ChunkBuilder`] docs for details on how this is
-//! dealt with.
+//! meshes and materials and such. This process is designed to happen
+//! asynchronously outside of the main game loop.
 
-use std::{fmt, marker::PhantomData};
+use std::fmt;
 
 use brine_chunk::Chunk;
 
@@ -24,15 +19,11 @@ pub use self::block_mesh::{GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder};
 pub use naive_blocks::NaiveBlocksChunkBuilder;
 pub use plugin::ChunkBuilderPlugin;
 
-/// A trait for types that can turn a [`Chunk`] into a renderable representation
-/// that can be added to a Bevy world.
-///
-/// See the [module documentation][self] for more information.
+/// A trait for types that can turn a [`Chunk`] into [`VoxelMesh`]es.
 pub trait ChunkBuilder: Sized {
     const TYPE: ChunkBuilderType;
 
-    /// Generates the output data from the provided chunk data.
-    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self>;
+    fn build_chunk(&self, chunk: &Chunk) -> Vec<VoxelMesh>;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,18 +46,4 @@ impl fmt::Debug for ChunkBuilderType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(self.0).finish()
     }
-}
-
-/// The output of a chunk builder.
-pub struct ChunkMeshes<Builder> {
-    pub chunk_x: i32,
-    pub chunk_z: i32,
-    pub sections: Vec<SectionMesh>,
-
-    _phantom: PhantomData<Builder>,
-}
-
-pub struct SectionMesh {
-    pub section_y: u8,
-    pub mesh: VoxelMesh,
 }

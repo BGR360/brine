@@ -1,7 +1,5 @@
 //! Two implementations of chunk builders using algorithms from the `block-mesh` crate.
 
-use std::marker::PhantomData;
-
 use bevy::prelude::*;
 use block_mesh::{
     ndshape::{ConstShape3u32, Shape},
@@ -16,7 +14,7 @@ use crate::{
     mesh::{Axis, VoxelFace, VoxelMesh},
 };
 
-use super::{ChunkBuilder, ChunkMeshes, SectionMesh};
+use super::ChunkBuilder;
 
 /// A [`ChunkBuilder`] that uses the [`visible_block_faces`] algorithm from the
 /// [`block_mesh`] crate to build chunks.
@@ -26,21 +24,15 @@ use super::{ChunkBuilder, ChunkMeshes, SectionMesh};
 pub struct VisibleFacesChunkBuilder;
 
 impl VisibleFacesChunkBuilder {
-    pub fn build_chunk(chunk: &Chunk) -> ChunkMeshes<Self> {
-        ChunkMeshes {
-            chunk_x: chunk.chunk_x,
-            chunk_z: chunk.chunk_z,
-            sections: chunk
-                .sections
-                .iter()
-                .map(Self::build_chunk_section)
-                .collect(),
-
-            _phantom: PhantomData,
-        }
+    pub fn build_chunk(chunk: &Chunk) -> Vec<VoxelMesh> {
+        chunk
+            .sections
+            .iter()
+            .map(Self::build_chunk_section)
+            .collect()
     }
 
-    pub fn build_chunk_section(chunk_section: &ChunkSection) -> SectionMesh {
+    pub fn build_chunk_section(chunk_section: &ChunkSection) -> VoxelMesh {
         BlockMeshBuilder::new().build_with(chunk_section, |builder| {
             let mut buffer = UnitQuadBuffer::new();
             block_mesh::visible_block_faces(
@@ -59,7 +51,7 @@ impl VisibleFacesChunkBuilder {
 impl ChunkBuilder for VisibleFacesChunkBuilder {
     const TYPE: ChunkBuilderType = ChunkBuilderType::VISIBLE_FACES;
 
-    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
+    fn build_chunk(&self, chunk: &Chunk) -> Vec<VoxelMesh> {
         Self::build_chunk(chunk)
     }
 }
@@ -72,21 +64,15 @@ impl ChunkBuilder for VisibleFacesChunkBuilder {
 pub struct GreedyQuadsChunkBuilder;
 
 impl GreedyQuadsChunkBuilder {
-    pub fn build_chunk(chunk: &Chunk) -> ChunkMeshes<Self> {
-        ChunkMeshes {
-            chunk_x: chunk.chunk_x,
-            chunk_z: chunk.chunk_z,
-            sections: chunk
-                .sections
-                .iter()
-                .map(Self::build_chunk_section)
-                .collect(),
-
-            _phantom: PhantomData,
-        }
+    pub fn build_chunk(chunk: &Chunk) -> Vec<VoxelMesh> {
+        chunk
+            .sections
+            .iter()
+            .map(Self::build_chunk_section)
+            .collect()
     }
 
-    pub fn build_chunk_section(chunk_section: &ChunkSection) -> SectionMesh {
+    pub fn build_chunk_section(chunk_section: &ChunkSection) -> VoxelMesh {
         BlockMeshBuilder::new().build_with(chunk_section, |builder| {
             let mut buffer = GreedyQuadsBuffer::new(builder.voxels.len());
             block_mesh::greedy_quads(
@@ -105,7 +91,7 @@ impl GreedyQuadsChunkBuilder {
 impl ChunkBuilder for GreedyQuadsChunkBuilder {
     const TYPE: ChunkBuilderType = ChunkBuilderType::GREEDY_QUADS;
 
-    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
+    fn build_chunk(&self, chunk: &Chunk) -> Vec<VoxelMesh> {
         Self::build_chunk(chunk)
     }
 }
@@ -161,7 +147,7 @@ impl BlockMeshBuilder {
         }
     }
 
-    fn build_with<F>(&mut self, chunk_section: &ChunkSection, func: F) -> SectionMesh
+    fn build_with<F>(&mut self, chunk_section: &ChunkSection, func: F) -> VoxelMesh
     where
         F: FnOnce(&BlockMeshBuilder) -> BlockMeshOutput,
     {
@@ -176,14 +162,9 @@ impl BlockMeshBuilder {
 
         let voxel_mesh = self.generate_voxel_mesh(output);
 
-        let section = SectionMesh {
-            section_y: chunk_section.chunk_y,
-            mesh: voxel_mesh,
-        };
-
         debug!("built chunk");
 
-        section
+        voxel_mesh
     }
 
     fn generate_voxel_mesh(&self, output: BlockMeshOutput) -> VoxelMesh {

@@ -1,20 +1,17 @@
 use std::{any::Any, marker::PhantomData};
 
-use bevy::{
-    ecs::event::Events,
-    prelude::*,
-    tasks::{AsyncComputeTaskPool, Task},
-};
+use bevy::{ecs::event::Events, prelude::*, tasks::AsyncComputeTaskPool};
 use futures_lite::future;
 
-use brine_chunk::Chunk;
 use brine_proto::event;
 
-use super::component::{BuiltChunk, BuiltChunkSection, ChunkSection};
+use crate::chunk_builder::component::PendingChunk;
+
+use super::component::ChunkSection;
 
 use super::{
     component::{BuiltChunkBundle, BuiltChunkSectionBundle},
-    ChunkBuilder, ChunkMeshes, SectionMesh,
+    ChunkBuilder,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemLabel)]
@@ -22,8 +19,6 @@ pub enum System {
     BuilderTaskSpawn,
     BuilderResultAddToWorld,
 }
-
-type ChunkBuilderTask<T> = Task<(Chunk, ChunkMeshes<T>)>;
 
 /// Plugin that asynchronously generates renderable entities from chunk data.
 ///
@@ -79,8 +74,7 @@ where
         };
 
         systems = systems
-            .with_system(Self::builder_result_add_to_world.label(System::BuilderResultAddToWorld))
-            .with_system(Self::add_names);
+            .with_system(Self::builder_result_add_to_world.label(System::BuilderResultAddToWorld));
 
         app.add_system_set(systems);
     }
@@ -91,7 +85,6 @@ where
     T: ChunkBuilder + Default + Any + Send + Sync + 'static,
 {
     fn builder_task_spawn(
-        current_chunk: &mut usize,
         chunk_event: event::clientbound::ChunkData,
         commands: &mut Commands,
         task_pool: &AsyncComputeTaskPool,
@@ -103,50 +96,50 @@ where
 
         debug!("Received chunk, spawning task");
 
-        let task: ChunkBuilderTask<T> = task_pool.spawn(async move {
+        let task = task_pool.spawn(async move {
             let built = T::default().build_chunk(&chunk);
             (chunk, built)
         });
 
-        commands.spawn().insert(task);
-
-        *current_chunk += 1;
+        commands.spawn().insert(PendingChunk {
+            task,
+            builder: T::TYPE,
+        });
     }
 
     fn builder_task_spawn_unique(
-        mut current_chunk: Local<usize>,
         mut chunk_events: ResMut<Events<event::clientbound::ChunkData>>,
         mut commands: Commands,
         task_pool: Res<AsyncComputeTaskPool>,
     ) {
         for chunk_event in chunk_events.drain() {
-            Self::builder_task_spawn(&mut *current_chunk, chunk_event, &mut commands, &task_pool);
+            Self::builder_task_spawn(chunk_event, &mut commands, &task_pool);
         }
     }
 
     fn builder_task_spawn_shared(
-        mut current_chunk: Local<usize>,
         mut chunk_events: EventReader<event::clientbound::ChunkData>,
         mut commands: Commands,
         task_pool: Res<AsyncComputeTaskPool>,
     ) {
         for chunk_event in chunk_events.iter() {
-            Self::builder_task_spawn(
-                &mut *current_chunk,
-                chunk_event.clone(),
-                &mut commands,
-                &task_pool,
-            );
+            Self::builder_task_spawn(chunk_event.clone(), &mut commands, &task_pool);
         }
     }
 
     fn builder_result_add_to_world(
         mut meshes: ResMut<Assets<Mesh>>,
-        mut built_chunks: Query<(Entity, &mut ChunkBuilderTask<T>)>,
+        mut built_chunks: Query<(Entity, &mut PendingChunk)>,
         mut commands: Commands,
     ) {
-        for (task_entity, mut task) in built_chunks.iter_mut() {
-            if let Some((chunk, built_chunk)) = future::block_on(future::poll_once(&mut *task)) {
+        for (task_entity, mut pending_chunk) in built_chunks.iter_mut() {
+            if pending_chunk.builder != T::TYPE {
+                continue;
+            }
+
+            if let Some((chunk, voxel_meshes)) =
+                future::block_on(future::poll_once(&mut pending_chunk.task))
+            {
                 debug!("Spawning chunk stuff");
 
                 let meshes = &mut *meshes;
@@ -154,10 +147,8 @@ where
                     .spawn()
                     .insert_bundle(BuiltChunkBundle::new(T::TYPE, chunk.chunk_x, chunk.chunk_z))
                     .with_children(move |parent| {
-                        for (section, SectionMesh { mesh, .. }) in chunk
-                            .sections
-                            .into_iter()
-                            .zip(built_chunk.sections.into_iter())
+                        for (section, mesh) in
+                            chunk.sections.into_iter().zip(voxel_meshes.into_iter())
                         {
                             parent
                                 .spawn()
@@ -173,29 +164,7 @@ where
                         }
                     });
 
-                // Task is complete, so remove task component from entity
-                commands.entity(task_entity).remove::<ChunkBuilderTask<T>>();
-            }
-        }
-    }
-
-    fn add_names(
-        built_chunks: Query<(Entity, &BuiltChunk), Added<BuiltChunk>>,
-        built_sections: Query<(Entity, &BuiltChunkSection), Added<BuiltChunkSection>>,
-        mut commands: Commands,
-    ) {
-        for (entity, built_chunk) in built_chunks.iter() {
-            if built_chunk.builder == T::TYPE {
-                commands
-                    .entity(entity)
-                    .insert(Name::new(built_chunk.to_string()));
-            }
-        }
-        for (entity, built_section) in built_sections.iter() {
-            if built_section.builder == T::TYPE {
-                commands
-                    .entity(entity)
-                    .insert(Name::new(built_section.to_string()));
+                commands.entity(task_entity).despawn();
             }
         }
     }

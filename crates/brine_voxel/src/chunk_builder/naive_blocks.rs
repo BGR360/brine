@@ -1,7 +1,5 @@
 //! Implementation of a chunk builder that just generates a cube for each block.
 
-use std::marker::PhantomData;
-
 use bevy::{
     prelude::*,
     render::mesh::{Indices, VertexAttributeValues},
@@ -11,28 +9,22 @@ use brine_chunk::{BlockState, Chunk, ChunkSection};
 
 use crate::mesh::{Axis, VoxelFace, VoxelMesh};
 
-use super::{ChunkBuilder, ChunkBuilderType, ChunkMeshes, SectionMesh};
+use super::{ChunkBuilder, ChunkBuilderType};
 
 /// A [`ChunkBuilder`] that just generates a cube mesh for each block.
 #[derive(Default)]
 pub struct NaiveBlocksChunkBuilder;
 
 impl NaiveBlocksChunkBuilder {
-    pub fn build_chunk(chunk: &Chunk) -> ChunkMeshes<Self> {
-        ChunkMeshes {
-            chunk_x: chunk.chunk_x,
-            chunk_z: chunk.chunk_z,
-            sections: chunk
-                .sections
-                .iter()
-                .map(Self::build_chunk_section)
-                .collect(),
-
-            _phantom: PhantomData,
-        }
+    pub fn build_chunk(chunk: &Chunk) -> Vec<VoxelMesh> {
+        chunk
+            .sections
+            .iter()
+            .map(Self::build_chunk_section)
+            .collect()
     }
 
-    pub fn build_chunk_section(section: &ChunkSection) -> SectionMesh {
+    pub fn build_chunk_section(section: &ChunkSection) -> VoxelMesh {
         let num_blocks = section.block_count as usize;
         let num_faces = num_blocks * 6;
         let mut voxel_values = Vec::with_capacity(num_blocks);
@@ -45,12 +37,9 @@ impl NaiveBlocksChunkBuilder {
             }
         }
 
-        SectionMesh {
-            section_y: section.chunk_y,
-            mesh: VoxelMesh {
-                faces,
-                voxel_values,
-            },
+        VoxelMesh {
+            faces,
+            voxel_values,
         }
     }
 
@@ -128,7 +117,7 @@ impl NaiveBlocksChunkBuilder {
 impl ChunkBuilder for NaiveBlocksChunkBuilder {
     const TYPE: ChunkBuilderType = ChunkBuilderType::NAIVE_BLOCKS;
 
-    fn build_chunk(&self, chunk: &Chunk) -> ChunkMeshes<Self> {
+    fn build_chunk(&self, chunk: &Chunk) -> Vec<VoxelMesh> {
         Self::build_chunk(chunk)
     }
 }
