@@ -10,12 +10,15 @@ use bevy::{
 };
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use bevy_inspector_egui::prelude::*;
+use brine_asset::MinecraftAssets;
+use brine_data::MinecraftData;
 use clap::Parser;
 
 use brine_proto::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};
 use brine_proto_backend::ProtocolBackendPlugin;
-use brine_voxel::chunk_builder::{
-    ChunkBuilderPlugin, GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder,
+use brine_voxel::{
+    chunk_builder::{ChunkBuilderPlugin, GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder},
+    texture::TextureBuilderPlugin,
 };
 
 use brine::{login::LoginPlugin, server::ServeChunksFromDirectoryPlugin, DEFAULT_LOG_FILTER};
@@ -61,6 +64,12 @@ fn main() {
             LoginPlugin::new(SERVER.to_string(), USERNAME.to_string()).exit_on_disconnect(),
         );
     }
+
+    let mc_data = MinecraftData::for_version("1.14.4");
+    let mc_assets = MinecraftAssets::new("assets/1.14.4", &mc_data).unwrap();
+    app.insert_resource(mc_data);
+    app.insert_resource(mc_assets);
+    app.add_plugin(TextureBuilderPlugin);
 
     app.add_plugin(MinecraftWorldViewerPlugin);
 

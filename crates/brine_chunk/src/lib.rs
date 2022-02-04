@@ -89,6 +89,55 @@ impl ChunkSection {
             block_states: Default::default(),
         }
     }
+
+    #[inline]
+    pub fn get_block<K>(&self, key: K) -> Result<BlockState, <K as TryInto<SectionKey>>::Error>
+    where
+        K: TryInto<SectionKey>,
+    {
+        let key = key.try_into()?;
+
+        let SectionKey { x, y, z } = key;
+        Ok(self.block_states.get_block(x, y, z))
+    }
+}
+
+/// A [`SectionKey`] is used to index a single block in a [`ChunkSection`]
+pub struct SectionKey {
+    pub x: u8,
+    pub y: u8,
+    pub z: u8,
+}
+
+impl<T> TryFrom<[T; 3]> for SectionKey
+where
+    T: Copy,
+    u8: TryFrom<T>,
+{
+    type Error = <u8 as TryFrom<T>>::Error;
+
+    fn try_from(value: [T; 3]) -> Result<Self, Self::Error> {
+        Ok(Self {
+            x: TryFrom::try_from(value[0])?,
+            y: TryFrom::try_from(value[1])?,
+            z: TryFrom::try_from(value[2])?,
+        })
+    }
+}
+
+impl<T> TryFrom<(T, T, T)> for SectionKey
+where
+    u8: TryFrom<T>,
+{
+    type Error = <u8 as TryFrom<T>>::Error;
+
+    fn try_from((x, y, z): (T, T, T)) -> Result<Self, Self::Error> {
+        Ok(Self {
+            x: TryFrom::try_from(x)?,
+            y: TryFrom::try_from(y)?,
+            z: TryFrom::try_from(z)?,
+        })
+    }
 }
 
 /// The block state for every block in a [`ChunkSection`], stored in
@@ -98,9 +147,37 @@ impl ChunkSection {
 pub struct BlockStates(pub [BlockState; BLOCKS_PER_SECTION]);
 
 impl BlockStates {
+    // Y-Z-X-major order, 4 bits per axis.
+    const Y_SHIFT: usize = 8;
+    const Z_SHIFT: usize = 4;
+    const X_SHIFT: usize = 0;
+    const Y_MASK: usize = 0b1111 << Self::Y_SHIFT;
+    const Z_MASK: usize = 0b1111 << Self::Z_SHIFT;
+    const X_MASK: usize = 0b1111 << Self::X_SHIFT;
+
     #[inline]
     pub fn iter(&self) -> BlockIter<'_> {
         BlockIter::new(self)
+    }
+
+    #[inline]
+    pub fn get_block(&self, x: u8, y: u8, z: u8) -> BlockState {
+        self.0[Self::xyz_to_index(x, y, z)]
+    }
+
+    #[inline]
+    pub fn xyz_to_index(x: u8, y: u8, z: u8) -> usize {
+        ((x as usize) << Self::X_SHIFT)
+            + ((y as usize) << Self::Y_SHIFT)
+            + ((z as usize) << Self::Z_SHIFT)
+    }
+
+    #[inline]
+    pub fn index_to_xyz(index: usize) -> (u8, u8, u8) {
+        let x = (index & Self::X_MASK) >> Self::X_SHIFT;
+        let y = (index & Self::Y_MASK) >> Self::Y_SHIFT;
+        let z = (index & Self::Z_MASK) >> Self::Z_SHIFT;
+        (x as u8, y as u8, z as u8)
     }
 }
 
@@ -140,17 +217,7 @@ impl<'a> Iterator for BlockIter<'a> {
             return None;
         }
 
-        // Y-Z-X-major order, 4 bits per axis.
-        const Y_SHIFT: usize = 8;
-        const Z_SHIFT: usize = 4;
-        const X_SHIFT: usize = 0;
-        const Y_MASK: usize = 0b1111 << Y_SHIFT;
-        const Z_MASK: usize = 0b1111 << Z_SHIFT;
-        const X_MASK: usize = 0b1111 << X_SHIFT;
-
-        let x = (self.cur_index & X_MASK) >> X_SHIFT;
-        let y = (self.cur_index & Y_MASK) >> Y_SHIFT;
-        let z = (self.cur_index & Z_MASK) >> Z_SHIFT;
+        let (x, y, z) = BlockStates::index_to_xyz(self.cur_index);
 
         let next = (
             x as u8,

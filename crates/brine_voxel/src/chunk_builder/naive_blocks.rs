@@ -27,20 +27,15 @@ impl NaiveBlocksChunkBuilder {
     pub fn build_chunk_section(section: &ChunkSection) -> VoxelMesh {
         let num_blocks = section.block_count as usize;
         let num_faces = num_blocks * 6;
-        let mut voxel_values = Vec::with_capacity(num_blocks);
         let mut faces = Vec::with_capacity(num_faces);
 
         for (x, y, z, block_state) in section.block_states.iter() {
             if block_state != BlockState::AIR {
-                voxel_values.push(block_state);
                 Self::build_voxel(x, y, z, &mut faces);
             }
         }
 
-        VoxelMesh {
-            faces,
-            voxel_values,
-        }
+        VoxelMesh { faces }
     }
 
     fn build_voxel(x: u8, y: u8, z: u8, faces: &mut Vec<VoxelFace>) {

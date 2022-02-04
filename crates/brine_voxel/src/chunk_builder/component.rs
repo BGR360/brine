@@ -6,6 +6,15 @@ use crate::mesh::VoxelMesh;
 
 use super::ChunkBuilderType;
 
+pub struct PendingMeshAtlas {
+    /// Strong handle to a texture atlas that contains all of the textures
+    /// needed to render a [`VoxelMesh`].
+    pub atlas: Handle<TextureAtlas>,
+
+    /// List of weak texture handles, one for each face in the [`VoxelMesh`].
+    pub face_textures: Vec<Handle<Image>>,
+}
+
 #[derive(Component, Default)]
 pub struct PendingChunk {
     pub builder: ChunkBuilderType,
@@ -13,7 +22,7 @@ pub struct PendingChunk {
     pub chunk_data: Option<brine_chunk::Chunk>,
     pub voxel_meshes: Option<Vec<VoxelMesh>>,
 
-    pub texture_atlases: Option<Vec<Handle<TextureAtlas>>>,
+    pub texture_atlases: Option<Vec<PendingMeshAtlas>>,
 }
 
 impl PendingChunk {

@@ -1,4 +1,4 @@
-use std::{collections::hash_map::Entry, path::PathBuf};
+use std::collections::hash_map::Entry;
 
 use bevy::{
     asset::{AssetPath, HandleId, LoadState},
@@ -6,19 +6,9 @@ use bevy::{
     utils::HashMap,
 };
 
-use brine_data::blocks::{BlockStateId, Blocks};
+use brine_data::blocks::BlockStateId;
 
-const TEXTURES_PATH: &str = "1.14.4/assets/minecraft/textures/block/";
 const PLACEHOLDER_PATH: &str = "placeholder.png";
-
-pub fn get_texture_path(block_state: BlockStateId, blocks: &Blocks) -> Option<PathBuf> {
-    let block_name = &blocks.get_by_state_id(block_state)?.name;
-
-    let mut path = PathBuf::from(TEXTURES_PATH);
-    path.push(format!("{}.png", block_name));
-
-    Some(path)
-}
 
 struct PendingAtlas {
     /// Strong handle to each texture that will eventually be added to the atlas.
@@ -40,7 +30,7 @@ impl PendingAtlas {
 #[derive(Default)]
 pub struct BlockTextures {
     /// Strong handle to a placeholder texture.
-    placeholder_texture: Handle<Image>,
+    pub placeholder_texture: Handle<Image>,
 
     /// Map from block state to texture handle.
     block_state_to_texture: HashMap<BlockStateId, Handle<Image>>,
@@ -88,6 +78,26 @@ impl BlockTextures {
         }
     }
 
+    pub fn create_texture_atlas_with_textures(
+        &mut self,
+        textures: impl IntoIterator<Item = Handle<Image>>,
+        asset_server: &AssetServer,
+    ) -> Handle<TextureAtlas> {
+        let handle_id = HandleId::random::<TextureAtlas>();
+        let handle = asset_server.get_handle(handle_id);
+
+        // The vended handle needs to be strong so that the atlas isn't dropped
+        // as soon as it is added to the `Assets` in `finish_texture_atlases`.
+        assert!(handle.is_strong());
+
+        self.pending_atlases.push(PendingAtlas {
+            textures: textures.into_iter().collect(),
+            handle: handle.clone(),
+        });
+
+        handle
+    }
+
     /// Returns a handle to a [`TextureAtlas`] that includes the textures for
     /// all of the block states in `block_states`.
     ///
@@ -120,21 +130,9 @@ impl BlockTextures {
         let textures = block_states
             .into_iter()
             .map(|block_state| self.get_or_load_texture(block_state, asset_server, &mut get_path))
-            .collect();
+            .collect::<Vec<_>>();
 
-        let handle_id = HandleId::random::<TextureAtlas>();
-        let handle = asset_server.get_handle(handle_id);
-
-        // The vended handle needs to be strong so that the atlas isn't dropped
-        // as soon as it is added to the `Assets` in `finish_texture_atlases`.
-        assert!(handle.is_strong());
-
-        self.pending_atlases.push(PendingAtlas {
-            textures,
-            handle: handle.clone(),
-        });
-
-        handle
+        self.create_texture_atlas_with_textures(textures, asset_server)
     }
 
     /// Builds a [`TextureAtlas`] out of each [`PendingAtlas`] that is ready to

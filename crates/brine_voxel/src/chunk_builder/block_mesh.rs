@@ -171,17 +171,17 @@ impl BlockMeshBuilder {
         let num_faces = output.num_quads();
         let mut faces = Vec::with_capacity(num_faces);
 
-        let mut block_states = Vec::new();
-
         output.for_each_quad_and_face(&self.faces, |quad, face| {
-            let voxel = quad.minimum.map(|elt| elt as u8);
+            let [x, y, z] = quad.minimum.map(|elt| elt as u8);
             let axis = Self::get_axis(face);
+            let tex_coords = face.tex_coords(RIGHT_HANDED_Y_UP_CONFIG.u_flip_face, true, &quad);
+            let indices = face.quad_mesh_indices(0).map(|i| i as u8);
+
             // Mesh needs to be offset by [-1, -1, -1] to be properly aligned.
+            let voxel = [x - 1, y - 1, z - 1];
             let positions = face
                 .quad_mesh_positions(&quad, 1.0)
                 .map(|[x, y, z]| [x - 1.0, y - 1.0, z - 1.0]);
-            let tex_coords = face.tex_coords(RIGHT_HANDED_Y_UP_CONFIG.u_flip_face, true, &quad);
-            let indices = face.quad_mesh_indices(0).map(|i| i as u8);
 
             faces.push(VoxelFace {
                 voxel,
@@ -190,15 +190,9 @@ impl BlockMeshBuilder {
                 tex_coords,
                 indices,
             });
-
-            let block_state = self.voxels[self.shape.linearize(quad.minimum) as usize];
-            block_states.push(block_state.0);
         });
 
-        VoxelMesh {
-            faces,
-            voxel_values: block_states,
-        }
+        VoxelMesh { faces }
     }
 
     fn get_axis(face: &OrientedBlockFace) -> Axis {

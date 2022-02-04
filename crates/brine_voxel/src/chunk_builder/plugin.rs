@@ -1,10 +1,12 @@
+use std::collections::hash_map::Entry;
 use std::{any::Any, marker::PhantomData};
 
 use bevy::tasks::Task;
-use bevy::utils::HashSet;
+use bevy::utils::{HashMap, HashSet};
 use bevy::{ecs::event::Events, prelude::*, tasks::AsyncComputeTaskPool};
 use brine_asset::blocks::BlockFace;
 use brine_asset::{BlockStateId, MinecraftAssets};
+use brine_chunk::ChunkSection;
 use futures_lite::future;
 
 use brine_proto::event;
@@ -13,7 +15,7 @@ use crate::chunk_builder::component::PendingChunk;
 use crate::mesh::VoxelMesh;
 use crate::texture::BlockTextures;
 
-use super::component::ChunkSection;
+use super::component::{ChunkSection as ChunkSectionComponent, PendingMeshAtlas};
 
 use super::{
     component::{BuiltChunkBundle, BuiltChunkSectionBundle},
@@ -115,33 +117,74 @@ where
             .insert_bundle((task, PendingChunk::new(T::TYPE)));
     }
 
-    fn get_block_states_in_mesh(mesh: &VoxelMesh) -> HashSet<BlockStateId> {
-        let mut block_states_in_mesh = HashSet::default();
-        for block_state in mesh.voxel_values.iter() {
-            block_states_in_mesh.insert(BlockStateId(block_state.0 as u16));
-        }
-        block_states_in_mesh
-    }
-
     fn build_texture_atlas_for_mesh(
         mesh: &VoxelMesh,
+        chunk_section: &ChunkSection,
         asset_server: &AssetServer,
         mc_assets: &MinecraftAssets,
         texture_builder: &mut BlockTextures,
-    ) -> Handle<TextureAtlas> {
-        let block_states = Self::get_block_states_in_mesh(mesh);
+    ) -> PendingMeshAtlas {
+        // One strong texture handle for each unique texture that will make up
+        // the atlas.
+        let mut texture_handles: HashSet<Handle<Image>> = Default::default();
 
-        texture_builder.create_texture_atlas(block_states, asset_server, |block_state| {
-            mc_assets
-                .textures()
-                .get_texture_path(block_state, BlockFace::Up)
-        })
+        // Weak texture handles, one for each face in the mesh.
+        let mut face_textures: Vec<Handle<Image>> = Vec::with_capacity(mesh.faces.len());
+
+        // Cached mapping from block state id to weak texture handle.
+        let mut handle_cache: HashMap<(BlockStateId, BlockFace), Handle<Image>> =
+            Default::default();
+
+        for face in mesh.faces.iter() {
+            let [x, y, z] = face.voxel;
+
+            let face = face.axis.into();
+
+            let block_state_id = chunk_section.get_block((x, y, z)).unwrap();
+            let block_state_id = BlockStateId(block_state_id.0 as u16);
+
+            let key = (block_state_id, face);
+            let weak_handle = match handle_cache.entry(key) {
+                Entry::Vacant(entry) => {
+                    let strong_handle =
+                        match mc_assets.textures().get_texture_path(block_state_id, face) {
+                            Some(path) => asset_server.load(path),
+                            None => {
+                                debug!("No texture for {:?}:{:?}", block_state_id, face);
+                                texture_builder.placeholder_texture.clone()
+                            }
+                        };
+
+                    if !texture_handles.contains(&strong_handle) {
+                        texture_handles.insert(strong_handle.clone());
+                    }
+
+                    entry.insert(strong_handle.as_weak()).clone_weak()
+                }
+                Entry::Occupied(entry) => entry.get().clone_weak(),
+            };
+
+            face_textures.push(weak_handle);
+        }
+
+        // debug!("texture_handles: {:#?}", &texture_handles);
+        // debug!("face_textures: {:#?}", &face_textures);
+        // debug!("handle_cache: {:#?}", &handle_cache);
+
+        let atlas = texture_builder
+            .create_texture_atlas_with_textures(texture_handles.into_iter(), asset_server);
+
+        PendingMeshAtlas {
+            atlas,
+            face_textures,
+        }
     }
 
     fn add_built_chunk_to_world(
         chunk_data: brine_chunk::Chunk,
         voxel_meshes: Vec<VoxelMesh>,
-        textures: Vec<Handle<Image>>,
+        atlases: Vec<&TextureAtlas>,
+        face_textures: Vec<Vec<Handle<Image>>>,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<StandardMaterial>,
         commands: &mut Commands,
@@ -158,25 +201,29 @@ where
                 chunk_data.chunk_z,
             ))
             .with_children(move |parent| {
-                for ((section, mesh), texture) in chunk_data
+                for (((section, mesh), atlas), face_textures) in chunk_data
                     .sections
                     .into_iter()
                     .zip(voxel_meshes.into_iter())
-                    .zip(textures.into_iter())
+                    .zip(atlases.into_iter())
+                    .zip(face_textures.into_iter())
                 {
+                    // debug!("atlas has texture handles: {:#?}", &atlas.texture_handles);
+                    // debug!("voxel mesh has face textures: {:#?}", &face_textures[..]);
+
                     parent
                         .spawn()
                         .insert_bundle(BuiltChunkSectionBundle::new(T::TYPE, section.chunk_y))
                         .insert_bundle(PbrBundle {
-                            mesh: meshes.add(mesh.to_render_mesh()),
+                            mesh: meshes.add(mesh.to_render_mesh(atlas, &face_textures[..])),
                             material: materials.add(StandardMaterial {
-                                base_color_texture: Some(texture),
+                                base_color_texture: Some(atlas.texture.clone()),
                                 unlit: true,
                                 ..Default::default()
                             }),
                             ..Default::default()
                         })
-                        .insert(ChunkSection(section));
+                        .insert(ChunkSectionComponent(section));
                 }
             })
             .id()
@@ -233,9 +280,11 @@ where
 
                 let texture_atlases = voxel_meshes
                     .iter()
-                    .map(|mesh| {
+                    .zip(chunk.sections.iter())
+                    .map(|(mesh, chunk_section)| {
                         Self::build_texture_atlas_for_mesh(
                             mesh,
+                            chunk_section,
                             &*asset_server,
                             &*mc_assets,
                             &mut *texture_builder,
@@ -269,16 +318,22 @@ where
                 .as_ref()
                 .unwrap()
                 .iter()
-                .map(|handle| atlases.get(handle))
+                .map(|pending_atlas| atlases.get(&pending_atlas.atlas))
                 .collect();
 
             if built_atlases.iter().any(|atlas| atlas.is_none()) {
                 continue;
             }
 
-            let textures: Vec<Handle<Image>> = built_atlases
-                .iter()
-                .map(|atlas| atlas.unwrap().texture.clone())
+            let atlases: Vec<&TextureAtlas> =
+                built_atlases.iter().map(|atlas| atlas.unwrap()).collect();
+
+            let face_textures: Vec<Vec<Handle<Image>>> = pending_chunk
+                .texture_atlases
+                .take()
+                .unwrap()
+                .into_iter()
+                .map(|atlas| atlas.face_textures)
                 .collect();
 
             let chunk = pending_chunk.chunk_data.take().unwrap();
@@ -292,7 +347,8 @@ where
             Self::add_built_chunk_to_world(
                 chunk,
                 voxel_meshes,
-                textures,
+                atlases,
+                face_textures,
                 &mut *meshes,
                 &mut *materials,
                 &mut commands,

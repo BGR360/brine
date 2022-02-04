@@ -2,15 +2,17 @@ use std::ops::Add;
 
 use bevy::{
     ecs::component::Component,
+    prelude::*,
     render::{
         mesh::{Indices, Mesh},
         render_resource::PrimitiveTopology,
     },
+    sprite::TextureAtlas,
 };
-use brine_chunk::BlockState;
+use brine_asset::blocks::BlockFace;
 
 /// The six sides of a voxel.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Axis {
     XPos = 0,
@@ -40,13 +42,24 @@ impl Axis {
     }
 }
 
+impl From<Axis> for BlockFace {
+    fn from(axis: Axis) -> Self {
+        match axis {
+            Axis::XPos => BlockFace::East,
+            Axis::XNeg => BlockFace::West,
+            Axis::YPos => BlockFace::Up,
+            Axis::YNeg => BlockFace::Down,
+            Axis::ZPos => BlockFace::South,
+            Axis::ZNeg => BlockFace::North,
+        }
+    }
+}
+
 /// A mesh made up of one or more voxels.
 #[derive(Component, Debug, Default, Clone)]
 pub struct VoxelMesh {
     /// A list of faces that make up the mesh.
     pub faces: Vec<VoxelFace>,
-
-    pub voxel_values: Vec<BlockState>,
 }
 
 /// A single face in a [`VoxelMesh`].
@@ -73,15 +86,24 @@ pub struct VoxelFace {
 }
 
 impl VoxelMesh {
-    pub fn to_render_mesh(&self) -> Mesh {
+    pub fn to_render_mesh(
+        &self,
+        texture_atlas: &TextureAtlas,
+        face_textures: &[Handle<Image>],
+    ) -> Mesh {
         let num_vertices = self.faces.len() * 4;
         let mut positions = Vec::with_capacity(num_vertices);
         let mut tex_coords = Vec::with_capacity(num_vertices);
         let mut normals = Vec::with_capacity(num_vertices);
 
-        for face in self.faces.iter() {
+        for (face, texture_handle) in self.faces.iter().zip(face_textures.iter()) {
             positions.extend_from_slice(&face.positions);
-            tex_coords.extend_from_slice(&face.tex_coords);
+
+            tex_coords.extend_from_slice(&Self::get_tex_coords(
+                face,
+                texture_atlas,
+                texture_handle,
+            ));
 
             let normal = face.axis.normal().map(|elt| elt as f32);
             normals.extend_from_slice(&[normal; 4]);
@@ -101,6 +123,31 @@ impl VoxelMesh {
         mesh.set_indices(Some(indices));
 
         mesh
+    }
+
+    fn get_tex_coords(
+        face: &VoxelFace,
+        texture_atlas: &TextureAtlas,
+        texture_handle: &Handle<Image>,
+    ) -> [[f32; 2]; 4] {
+        let index = texture_atlas
+            .texture_handles
+            .as_ref()
+            .unwrap()
+            .get(texture_handle);
+
+        if let Some(index) = index {
+            let rect = texture_atlas.textures[*index];
+
+            face.tex_coords.map(|[u, v]| {
+                [
+                    (rect.min.x + (u * rect.width())) / texture_atlas.size.x,
+                    (rect.min.y + (v * rect.height())) / texture_atlas.size.y,
+                ]
+            })
+        } else {
+            face.tex_coords
+        }
     }
 
     fn get_indices<T>(&self) -> Vec<T>

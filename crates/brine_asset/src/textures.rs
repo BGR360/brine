@@ -56,12 +56,12 @@ impl Textures {
 
         let model_name = &first_variant.models()[0].model;
 
-        if model_name.contains("water")
-            || model_name.contains("lava")
-            || model_name.contains("fire")
-        {
-            return None;
-        }
+        // if model_name.contains("water")
+        //     || model_name.contains("lava")
+        //     || model_name.contains("fire")
+        // {
+        //     return None;
+        // }
 
         let models = self.assets.load_block_model_recursive(model_name).ok()?;
 
