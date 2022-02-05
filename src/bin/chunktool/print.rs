@@ -6,7 +6,7 @@ use std::{
 use brine::chunk::{load_chunk, Result};
 use brine_chunk::{Chunk, ChunkSection};
 use brine_data::{
-    blocks::{BlockState, BlockStateId, StateValue},
+    blocks::{BlockStateId, StateValue},
     MinecraftData,
 };
 
@@ -100,7 +100,7 @@ impl ChunkPrinter {
 
             let name = block
                 .as_ref()
-                .map(|block| &block.display_name[..])
+                .map(|block| block.display_name)
                 .unwrap_or_else(|| "");
 
             println!("{block_state:5?} ({name:10}): {count}");

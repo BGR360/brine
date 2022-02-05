@@ -34,13 +34,13 @@ impl Blocks {
     }
 
     pub(crate) fn build(assets: &AssetPack, data: &MinecraftData) -> Result<Self> {
-        let num_blocks = data.blocks().blocks.len();
+        let num_blocks = data.blocks().count();
         let mut block_states: Vec<BlockStates> = vec![Default::default(); num_blocks];
 
         assets.for_each_blockstates(|path| -> Result<_> {
             let block_name = path.file_stem().unwrap().to_str().unwrap();
 
-            println!("Loading `{}` at {}", block_name, path.to_string_lossy());
+            //println!("Loading `{}` at {}", block_name, path.to_string_lossy());
 
             if let Some(block_index) = data.blocks().name_to_block.get(block_name) {
                 let blockstates: BlockStates = assets.load_resource_at_path(path)?;
@@ -48,7 +48,7 @@ impl Blocks {
                 block_states[*block_index as usize] = blockstates;
             } else {
                 // TODO: check items
-                println!("**** NOT FOUND: {} ****", block_name);
+                //println!("**** NOT FOUND: {} ****", block_name);
             }
 
             Ok(())
