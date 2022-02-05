@@ -1,10 +1,8 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
 use brine::chunk::{load_chunk, Result};
 use brine_chunk::{BlockState, ChunkSection};
+use brine_data::{blocks::BlockStateId, MinecraftData};
 
 /// Prints a summary of a chunk loaded from disk.
 #[derive(clap::Args)]
@@ -14,14 +12,16 @@ pub struct Args {
 }
 
 pub(crate) fn main(args: Args) {
-    match print_chunk(&args.file) {
+    match print_chunk(&args) {
         Ok(()) => {}
         Err(e) => println!("ERROR: {}", e),
     }
 }
 
-fn print_chunk(path: &Path) -> Result<()> {
-    let chunk = load_chunk(path)?;
+fn print_chunk(args: &Args) -> Result<()> {
+    let data = MinecraftData::for_version("1.14.4");
+
+    let chunk = load_chunk(&args.file)?;
 
     let section_ys = chunk
         .sections
@@ -49,7 +49,13 @@ fn print_chunk(path: &Path) -> Result<()> {
         entries.sort_by_key(|(_, count)| *count);
 
         for (block_state, count) in entries.into_iter().rev() {
-            println!("{:?}: {}", block_state, count);
+            let name = data
+                .blocks()
+                .get_by_state_id(BlockStateId(block_state.0 as u16))
+                .map(|block| &block.display_name[..])
+                .unwrap_or_else(|| "");
+
+            println!("{block_state:5?} ({name:10}): {count}");
         }
     }
 
