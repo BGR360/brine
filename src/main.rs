@@ -17,7 +17,10 @@ use clap::Parser;
 use brine_proto::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};
 use brine_proto_backend::ProtocolBackendPlugin;
 use brine_voxel::{
-    chunk_builder::{ChunkBuilderPlugin, GreedyQuadsChunkBuilder, VisibleFacesChunkBuilder},
+    chunk_builder::{
+        component::BuiltChunkSection, ChunkBuilderPlugin, GreedyQuadsChunkBuilder,
+        VisibleFacesChunkBuilder,
+    },
     texture::TextureBuilderPlugin,
 };
 
@@ -46,7 +49,7 @@ fn main() {
     // Default plugins.
 
     app.insert_resource(LogSettings {
-        level: Level::INFO,
+        level: Level::DEBUG,
         filter: String::from(DEFAULT_LOG_FILTER),
     });
     app.add_plugins(DefaultPlugins);
@@ -95,9 +98,10 @@ impl Plugin for MinecraftWorldViewerPlugin {
         .insert_resource(Msaa { samples: 4 })
         .add_plugin(WireframePlugin)
         .add_plugin(FlyCameraPlugin)
-        // .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
-        .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
-        .add_startup_system(set_up_camera);
+        .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
+        // .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
+        .add_startup_system(set_up_camera)
+        .add_system(give_chunk_sections_correct_y_height);
     }
 }
 
@@ -115,4 +119,13 @@ fn set_up_camera(mut commands: Commands) {
             ..Default::default()
         })
         .insert(FlyCamera::default());
+}
+
+fn give_chunk_sections_correct_y_height(mut query: Query<(&mut Transform, &BuiltChunkSection)>) {
+    for (mut transform, chunk_section) in query.iter_mut() {
+        let height = (chunk_section.section_y as f32) * 16.0;
+        if transform.translation.y != height {
+            transform.translation.y = height;
+        }
+    }
 }

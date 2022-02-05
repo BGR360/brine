@@ -105,16 +105,21 @@ where
             return;
         }
 
-        debug!("Received chunk, spawning task");
+        let chunk_x = chunk.chunk_x;
+        let chunk_z = chunk.chunk_z;
+
+        debug!("Received chunk ({}, {}), spawning task", chunk_x, chunk_z);
 
         let task: MesherTask = task_pool.spawn(async move {
             let built = T::default().build_chunk(&chunk);
             (chunk, built)
         });
 
-        commands
-            .spawn()
-            .insert_bundle((task, PendingChunk::new(T::TYPE)));
+        commands.spawn().insert_bundle((
+            task,
+            PendingChunk::new(T::TYPE),
+            Name::new(format!("Pending Chunk ({}, {})", chunk_x, chunk_z)),
+        ));
     }
 
     fn build_texture_atlas_for_mesh(
@@ -201,7 +206,7 @@ where
                 chunk_data.chunk_z,
             ))
             .with_children(move |parent| {
-                for (((section, mesh), atlas), face_textures) in chunk_data
+                for (((section, mut mesh), atlas), face_textures) in chunk_data
                     .sections
                     .into_iter()
                     .zip(voxel_meshes.into_iter())
@@ -211,11 +216,13 @@ where
                     // debug!("atlas has texture handles: {:#?}", &atlas.texture_handles);
                     // debug!("voxel mesh has face textures: {:#?}", &face_textures[..]);
 
+                    mesh.adjust_tex_coords(atlas, &face_textures);
+
                     parent
                         .spawn()
                         .insert_bundle(BuiltChunkSectionBundle::new(T::TYPE, section.chunk_y))
                         .insert_bundle(PbrBundle {
-                            mesh: meshes.add(mesh.to_render_mesh(atlas, &face_textures[..])),
+                            mesh: meshes.add(mesh.to_render_mesh()),
                             material: materials.add(StandardMaterial {
                                 base_color_texture: Some(atlas.texture.clone()),
                                 unlit: true,

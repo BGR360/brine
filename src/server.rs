@@ -57,17 +57,19 @@ fn load_chunks(
     for entry in fs::read_dir(&chunk_directory.path)? {
         let entry = entry?;
 
-        if entry
-            .file_name()
-            .to_string_lossy()
-            .starts_with("chunk_light_")
-        {
+        let path_string = entry.file_name().to_string_lossy().to_string();
+
+        if path_string.starts_with("chunk_light_") || !path_string.ends_with(".dump") {
             continue;
         }
 
-        let task: LoadChunkTask = task_pool.spawn(async move { load_chunk(entry.path()) });
+        let path = entry.path();
+        let task: LoadChunkTask = task_pool.spawn(async move { load_chunk(path) });
 
-        commands.spawn().insert(task);
+        commands.spawn().insert_bundle((
+            task,
+            Name::new(format!("Loading Chunk {}", entry.path().to_string_lossy())),
+        ));
     }
 
     Ok(())
@@ -83,7 +85,7 @@ fn send_chunks(
             let chunk_data = chunk_data?;
             chunk_events.send(ChunkData { chunk_data });
 
-            commands.entity(task_entity).remove::<LoadChunkTask>();
+            commands.entity(task_entity).despawn();
         }
     }
 

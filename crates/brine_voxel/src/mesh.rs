@@ -86,24 +86,15 @@ pub struct VoxelFace {
 }
 
 impl VoxelMesh {
-    pub fn to_render_mesh(
-        &self,
-        texture_atlas: &TextureAtlas,
-        face_textures: &[Handle<Image>],
-    ) -> Mesh {
+    pub fn to_render_mesh(&self) -> Mesh {
         let num_vertices = self.faces.len() * 4;
         let mut positions = Vec::with_capacity(num_vertices);
         let mut tex_coords = Vec::with_capacity(num_vertices);
         let mut normals = Vec::with_capacity(num_vertices);
 
-        for (face, texture_handle) in self.faces.iter().zip(face_textures.iter()) {
+        for face in self.faces.iter() {
             positions.extend_from_slice(&face.positions);
-
-            tex_coords.extend_from_slice(&Self::get_tex_coords(
-                face,
-                texture_atlas,
-                texture_handle,
-            ));
+            tex_coords.extend_from_slice(&face.tex_coords);
 
             let normal = face.axis.normal().map(|elt| elt as f32);
             normals.extend_from_slice(&[normal; 4]);
@@ -123,6 +114,16 @@ impl VoxelMesh {
         mesh.set_indices(Some(indices));
 
         mesh
+    }
+
+    pub fn adjust_tex_coords(
+        &mut self,
+        texture_atlas: &TextureAtlas,
+        face_textures: &[Handle<Image>],
+    ) {
+        for (face, texture_handle) in self.faces.iter_mut().zip(face_textures.iter()) {
+            face.tex_coords = Self::get_tex_coords(face, texture_atlas, texture_handle);
+        }
     }
 
     fn get_tex_coords(
