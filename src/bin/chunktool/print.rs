@@ -1,42 +1,86 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use brine::chunk::{load_chunk, Result};
-use brine_chunk::{BlockState, ChunkSection};
-use brine_data::{blocks::BlockStateId, MinecraftData};
+use brine_chunk::{Chunk, ChunkSection};
+use brine_data::{
+    blocks::{BlockState, BlockStateId, StateValue},
+    MinecraftData,
+};
 
 /// Prints a summary of a chunk loaded from disk.
 #[derive(clap::Args)]
 pub struct Args {
     /// Path to a chunk data file to load.
     file: PathBuf,
+
+    /// Show detailed information for a specific chunk section.
+    #[clap(short, long)]
+    section: Option<usize>,
 }
 
 pub(crate) fn main(args: Args) {
-    match print_chunk(&args) {
+    match print_chunk_from_file(&args.file, args.section) {
         Ok(()) => {}
         Err(e) => println!("ERROR: {}", e),
     }
 }
 
-fn print_chunk(args: &Args) -> Result<()> {
+fn print_chunk_from_file(path: &Path, section: Option<usize>) -> Result<()> {
     let data = MinecraftData::for_version("1.14.4");
+    let chunk = load_chunk(path)?;
 
-    let chunk = load_chunk(&args.file)?;
+    let printer = ChunkPrinter { data, chunk };
 
-    let section_ys = chunk
-        .sections
-        .iter()
-        .map(|section| section.chunk_y)
-        .collect::<Vec<_>>();
+    printer.print_chunk(section);
 
-    println!("================= CHUNK =================");
-    println!();
-    println!("Position: x = {}, z = {}", chunk.chunk_x, chunk.chunk_z);
-    println!();
-    println!("{} Sections:", section_ys.len());
-    println!("{:?}", section_ys);
+    Ok(())
+}
 
-    for section in chunk.sections.iter().rev() {
+pub struct ChunkPrinter {
+    data: MinecraftData,
+    chunk: Chunk,
+}
+
+impl ChunkPrinter {
+    fn print_chunk(&self, section: Option<usize>) {
+        let section_ys = self
+            .chunk
+            .sections
+            .iter()
+            .map(|section| section.chunk_y)
+            .collect::<Vec<_>>();
+
+        println!();
+        println!("================= CHUNK =================");
+        println!();
+        println!(
+            "Position: x = {}, z = {}",
+            self.chunk.chunk_x, self.chunk.chunk_z
+        );
+        println!();
+        println!("{} Sections:", section_ys.len());
+        println!("{:?}", section_ys);
+
+        if let Some(section_y) = section {
+            let section = self
+                .chunk
+                .sections
+                .iter()
+                .find(|section| section.chunk_y as usize == section_y)
+                .expect("Chunk has no section at that y-height");
+
+            self.print_section(section, true);
+        } else {
+            for section in self.chunk.sections.iter().rev() {
+                self.print_section(section, false);
+            }
+        }
+    }
+
+    fn print_section(&self, section: &ChunkSection, detailed: bool) {
         println!();
         println!("=============== Section ===============");
         println!();
@@ -45,29 +89,49 @@ fn print_chunk(args: &Args) -> Result<()> {
         println!("{} Blocks:", section.block_count);
         println!();
 
-        let mut entries = block_counts(section).into_iter().collect::<Vec<_>>();
+        let mut entries = self.block_counts(section).into_iter().collect::<Vec<_>>();
         entries.sort_by_key(|(_, count)| *count);
 
         for (block_state, count) in entries.into_iter().rev() {
-            let name = data
+            let block = self
+                .data
                 .blocks()
-                .get_by_state_id(BlockStateId(block_state.0 as u16))
+                .get_by_state_id(BlockStateId(block_state.0 as u16));
+
+            let name = block
+                .as_ref()
                 .map(|block| &block.display_name[..])
                 .unwrap_or_else(|| "");
 
             println!("{block_state:5?} ({name:10}): {count}");
+
+            if detailed {
+                if let Some(block) = block.as_ref() {
+                    let mut states: Vec<(&str, StateValue)> = block
+                        .state
+                        .iter()
+                        .map(|(name, state)| (*name, *state))
+                        .collect();
+
+                    states.sort_by_key(|(name, _)| *name);
+
+                    for (state, value) in states.iter() {
+                        println!("{:?} = {:?}", state, value);
+                    }
+                    println!();
+                }
+            }
         }
     }
 
-    Ok(())
-}
+    fn block_counts(&self, section: &ChunkSection) -> HashMap<BlockStateId, usize> {
+        let mut counts = HashMap::new();
 
-fn block_counts(section: &ChunkSection) -> HashMap<BlockState, usize> {
-    let mut counts = HashMap::new();
+        for (_x, _y, _z, block_state) in section.block_states.iter() {
+            let block_state_id = BlockStateId(block_state.0 as u16);
+            *counts.entry(block_state_id).or_insert(0) += 1;
+        }
 
-    for (_x, _y, _z, block_state) in section.block_states.iter() {
-        *counts.entry(block_state).or_insert(0) += 1;
+        counts
     }
-
-    counts
 }

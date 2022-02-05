@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 minecraft-data-rs = { git = "https://github.com/BGR360/minecraft-data-rs", branch = "my-fork" }
+
+[dev-dependencies]
+maplit = "1"
