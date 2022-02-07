@@ -1051,6 +1051,7 @@ version = "0.0.0"
 dependencies = [
  "brine_data",
  "minecraft-assets",
+ "slab",
 ]
 
 [[package]]

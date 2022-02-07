@@ -10,10 +10,13 @@ pub use brine_data::{
     Version,
 };
 
+mod hash_slab;
+
 pub mod blocks;
 pub mod textures;
 
-pub use blocks::Blocks;
+pub use blocks::{BlockFace, Blocks};
+pub use hash_slab::HashSlab;
 pub use textures::Textures;
 
 /// Provides access to Minecraft assets for a given assets directory.
