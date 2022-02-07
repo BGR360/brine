@@ -1,6 +1,7 @@
 use std::{
     borrow::Borrow,
     collections::{hash_map::RandomState, HashMap},
+    fmt,
     hash::{BuildHasher, Hash, Hasher},
 };
 
@@ -48,6 +49,8 @@ where
         self.values.get(key.into())
     }
 
+    //pub fn get_range(&self, )
+
     /// Returns the key corresponding to the value with the same hash as
     /// `value`.
     ///
@@ -72,5 +75,14 @@ where
         let mut hasher = self.keys.hasher().build_hasher();
         value.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+impl<V, K, S> fmt::Debug for HashSlab<V, K, S>
+where
+    V: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map().entries(self.values.iter()).finish()
     }
 }
