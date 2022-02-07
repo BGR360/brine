@@ -3,12 +3,15 @@ use std::path::PathBuf;
 use minecraft_assets::{
     api::{AssetPack, ModelResolver, ResourceLocation, Result},
     schemas::{
-        blockstates::BlockStates,
+        blockstates::multipart::StateValue as McStateValue,
         models::{BlockFace, Model},
     },
 };
 
-use brine_data::{blocks::BlockStateId, MinecraftData};
+use brine_data::{
+    blocks::{BlockStateId, StateValue},
+    MinecraftData,
+};
 
 pub struct Textures {
     data: MinecraftData,
@@ -46,22 +49,23 @@ impl Textures {
 
     fn get_model(&self, block_state_id: BlockStateId) -> Option<Model> {
         let block = self.data.blocks().get_by_state_id(block_state_id)?;
+
         let name = &block.name;
         let blockstates = self.assets.load_blockstates(name).ok()?;
 
-        let first_variant = match blockstates {
-            BlockStates::Variants { ref variants } => variants.values().next().unwrap(),
-            BlockStates::Multipart { ref cases } => &cases[0].apply,
-        };
+        let cases = blockstates.into_multipart();
 
-        let model_name = &first_variant.models()[0].model;
+        let state_values: Vec<(&str, McStateValue)> = block
+            .state
+            .iter()
+            .map(|(state, value)| (*state, state_value_to_mc_state_value(value)))
+            .collect();
 
-        // if model_name.contains("water")
-        //     || model_name.contains("lava")
-        //     || model_name.contains("fire")
-        // {
-        //     return None;
-        // }
+        let first_case_that_applies = cases
+            .iter()
+            .find(|case| case.applies(state_values.iter().map(|(state, value)| (*state, value))))?;
+
+        let model_name = &first_case_that_applies.apply.models()[0].model;
 
         let models = self.assets.load_block_model_recursive(model_name).ok()?;
 
@@ -75,5 +79,13 @@ impl Textures {
             assets: assets.clone(),
             data: data.clone(),
         })
+    }
+}
+
+pub(crate) fn state_value_to_mc_state_value(state_value: &StateValue) -> McStateValue {
+    match state_value {
+        StateValue::Bool(b) => McStateValue::from(*b),
+        StateValue::Enum(value) => McStateValue::from(*value),
+        StateValue::Int(i) => McStateValue::from(i.to_string()),
     }
 }
