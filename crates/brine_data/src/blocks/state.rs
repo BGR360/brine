@@ -89,8 +89,15 @@ impl McStateExt for McState {
                 .map(|value| StateValue::Enum(value.as_str()))
                 .collect(),
 
-            McStateType::Bool => vec![StateValue::Bool(false), StateValue::Bool(true)],
+            // See net.minecraft.world.level.block.state.properties.BooleanProperty
+            McStateType::Bool => vec![StateValue::Bool(true), StateValue::Bool(false)],
 
+            // See net.minecraft.world.level.block.state.properties.IntegerProperty
+            //
+            // XXX: the Minecraft source code inserts integer values into a
+            // HashSet before registering them, does that mean I have no way of
+            // knowing the order of assignment??? Idk, just assuming they're
+            // assigned in order for now...
             McStateType::Int => (0..self.num_values)
                 .map(|i| StateValue::Int(i as i32))
                 .collect(),
@@ -279,13 +286,13 @@ mod test {
             assert_eq!(
                 possible_states.get_nth(0),
                 hashmap! {
-                    "test_bool" => StateValue::Bool(false)
+                    "test_bool" => StateValue::Bool(true)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(1),
                 hashmap! {
-                    "test_bool" => StateValue::Bool(true)
+                    "test_bool" => StateValue::Bool(false)
                 }
             );
         }
@@ -302,42 +309,42 @@ mod test {
                 possible_states.get_nth(0),
                 hashmap! {
                     "test_int" => StateValue::Int(0),
-                    "test_bool" => StateValue::Bool(false)
+                    "test_bool" => StateValue::Bool(true)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(1),
                 hashmap! {
                     "test_int" => StateValue::Int(0),
-                    "test_bool" => StateValue::Bool(true)
+                    "test_bool" => StateValue::Bool(false)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(2),
                 hashmap! {
                     "test_int" => StateValue::Int(1),
-                    "test_bool" => StateValue::Bool(false)
+                    "test_bool" => StateValue::Bool(true)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(3),
                 hashmap! {
                     "test_int" => StateValue::Int(1),
-                    "test_bool" => StateValue::Bool(true)
+                    "test_bool" => StateValue::Bool(false)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(4),
                 hashmap! {
                     "test_int" => StateValue::Int(2),
-                    "test_bool" => StateValue::Bool(false)
+                    "test_bool" => StateValue::Bool(true)
                 }
             );
             assert_eq!(
                 possible_states.get_nth(5),
                 hashmap! {
                     "test_int" => StateValue::Int(2),
-                    "test_bool" => StateValue::Bool(true)
+                    "test_bool" => StateValue::Bool(false)
                 }
             );
         }
