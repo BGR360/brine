@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use minecraft_assets::api::{AssetPack, Result};
 
-use super::McModel;
+use crate::api::McModel;
 
 pub(crate) type UnresolvedModelTable = HashMap<String, McModel>;
 

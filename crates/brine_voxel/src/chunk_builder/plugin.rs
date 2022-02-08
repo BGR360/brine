@@ -4,11 +4,11 @@ use std::{any::Any, marker::PhantomData};
 use bevy::tasks::Task;
 use bevy::utils::{HashMap, HashSet};
 use bevy::{ecs::event::Events, prelude::*, tasks::AsyncComputeTaskPool};
-use brine_asset::blocks::BlockFace;
-use brine_asset::{BlockStateId, MinecraftAssets};
-use brine_chunk::ChunkSection;
 use futures_lite::future;
 
+use brine_asset::api::BlockFace;
+use brine_asset::{BlockStateId, MinecraftAssets};
+use brine_chunk::ChunkSection;
 use brine_proto::event;
 
 use crate::chunk_builder::component::PendingChunk;
@@ -226,6 +226,7 @@ where
                             material: materials.add(StandardMaterial {
                                 base_color_texture: Some(atlas.texture.clone()),
                                 unlit: true,
+                                //alpha_mode: AlphaMode::Blend,
                                 ..Default::default()
                             }),
                             ..Default::default()

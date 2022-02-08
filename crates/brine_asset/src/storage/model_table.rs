@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use indexmap::IndexMap;
 
-use super::Model;
+use crate::api::Model;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
 pub struct ModelName(pub String);

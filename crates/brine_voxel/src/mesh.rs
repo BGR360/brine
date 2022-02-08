@@ -9,7 +9,7 @@ use bevy::{
     },
     sprite::TextureAtlas,
 };
-use brine_asset::blocks::BlockFace;
+use brine_asset::BlockFace;
 
 /// The six sides of a voxel.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

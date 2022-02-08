@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use brine_asset::{blocks::BlockFace, MinecraftAssets};
+use brine_asset::{BlockFace, MinecraftAssets};
 
 use brine_data::{blocks::BlockStateId, MinecraftData};
 use brine_voxel::texture::{BlockTextures, TextureBuilderPlugin};
