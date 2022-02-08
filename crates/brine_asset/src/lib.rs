@@ -11,14 +11,11 @@ pub use brine_data::{
     Version,
 };
 
-mod hash_slab;
-
 pub mod blocks;
 pub mod models;
 pub mod textures;
 
 pub use blocks::{BlockFace, Blocks};
-pub use hash_slab::HashSlab;
 pub use models::Models;
 pub use textures::Textures;
 

@@ -14,29 +14,29 @@ use brine_data::MinecraftData;
 use unresolved::{UnresolvedModelLoader, UnresolvedModelTable};
 
 pub struct Models<'a> {
-    models: &'a ModelTable,
+    model_table: &'a ModelTable,
 }
 
 impl<'a> Models<'a> {
     #[inline]
-    pub(crate) fn new(models: &'a ModelTable) -> Self {
-        Self { models }
+    pub(crate) fn new(model_table: &'a ModelTable) -> Self {
+        Self { model_table }
     }
 
     #[inline]
     pub fn get_by_name(&self, name: &str) -> Option<&Model> {
-        let key = self.models.get_key(name)?;
-        self.models.get_by_key(key)
+        let key = self.model_table.get_key(name)?;
+        self.model_table.get_by_key(key)
     }
 
     #[inline]
     pub fn get_by_key(&self, key: ModelKey) -> Option<&Model> {
-        self.models.get_by_key(key)
+        self.model_table.get_by_key(key)
     }
 
     #[inline]
     pub fn get_key(&self, name: &str) -> Option<ModelKey> {
-        self.models.get_key(name)
+        self.model_table.get_key(name)
     }
 }
 

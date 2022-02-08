@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+indexmap = "1.8"
 minecraft-assets = { path = "../minecraft-assets-rs" }
-slab = "0.4"
 
 brine_data = { path = "../brine_data" }

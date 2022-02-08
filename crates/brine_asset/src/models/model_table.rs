@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use crate::hash_slab::{HashSlab, UsizeKey};
+use indexmap::IndexMap;
 
 use super::Model;
 
@@ -13,32 +13,27 @@ impl Borrow<str> for ModelName {
     }
 }
 
-pub type ModelKey = UsizeKey<ModelName>;
+pub struct ModelKey(pub usize);
 
 #[derive(Debug, Default, Clone)]
 pub struct ModelTable {
-    pub(crate) names: HashSlab<ModelName, ModelKey>,
-    pub(crate) models: Vec<Model>,
+    pub(crate) models: IndexMap<ModelName, Model>,
 }
 
 impl ModelTable {
     pub fn insert(&mut self, name: String, model: Model) -> ModelKey {
-        let key = self.names.insert(ModelName(name));
+        let (index, _) = self.models.insert_full(ModelName(name), model);
 
-        self.models.push(model);
-
-        assert_eq!(self.models.len() - 1, usize::from(key));
-
-        key
+        ModelKey(index)
     }
 
     #[inline]
     pub fn get_key(&self, name: &str) -> Option<ModelKey> {
-        self.names.get_key(name)
+        self.models.get_index_of(name).map(ModelKey)
     }
 
     #[inline]
     pub fn get_by_key(&self, key: ModelKey) -> Option<&Model> {
-        self.models.get(usize::from(key))
+        self.models.get_index(key.0).map(|(_name, model)| model)
     }
 }

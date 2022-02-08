@@ -1050,8 +1050,8 @@ name = "brine_asset"
 version = "0.0.0"
 dependencies = [
  "brine_data",
+ "indexmap",
  "minecraft-assets",
- "slab",
 ]
 
 [[package]]
