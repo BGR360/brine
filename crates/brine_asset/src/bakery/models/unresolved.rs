@@ -1,15 +1,17 @@
 use std::{collections::HashMap, path::Path};
 
-use minecraft_assets::api::{AssetPack, Result};
+use minecraft_assets::api::{AssetPack, ModelIdentifier, ResourceIdentifier, Result};
+use tracing::debug;
 
 use crate::api::McModel;
 
-pub type UnresolvedModelTable = HashMap<String, McModel>;
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct UnresolvedModelTable(pub HashMap<String, McModel>);
 
 pub fn load_block_models(assets: &AssetPack) -> Result<UnresolvedModelTable> {
     let mut table = Default::default();
 
-    assets.for_each_block_model(|path| load_model(assets, path, &mut table))?;
+    assets.for_each_block_model(|name, path| load_model(assets, name, path, &mut table))?;
 
     Ok(table)
 }
@@ -17,17 +19,24 @@ pub fn load_block_models(assets: &AssetPack) -> Result<UnresolvedModelTable> {
 pub fn _load_item_models(assets: &AssetPack) -> Result<UnresolvedModelTable> {
     let mut table = Default::default();
 
-    assets.for_each_item_model(|path| load_model(assets, path, &mut table))?;
+    assets.for_each_item_model(|name, path| load_model(assets, name, path, &mut table))?;
 
     Ok(table)
 }
 
-fn load_model(assets: &AssetPack, path: &Path, table: &mut UnresolvedModelTable) -> Result<()> {
+fn load_model(
+    assets: &AssetPack,
+    name: &ResourceIdentifier,
+    path: &Path,
+    table: &mut UnresolvedModelTable,
+) -> Result<()> {
+    debug!("Loading model {:?}", name);
+
     let model: McModel = assets.load_resource_at_path(path)?;
 
-    let model_name = path.file_stem().unwrap().to_string_lossy().to_string();
+    let model_id = ModelIdentifier::from(name.into_owned());
 
-    table.insert(model_name, model);
+    table.0.insert(model_id.model_name().to_string(), model);
 
     Ok(())
 }

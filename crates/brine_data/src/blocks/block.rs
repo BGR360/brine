@@ -75,6 +75,13 @@ impl Blocks {
         self.blocks.len()
     }
 
+    #[inline]
+    pub fn all(&self) -> impl Iterator<Item = Block<'_>> + '_ {
+        self.blocks
+            .iter()
+            .map(|mc_block| Self::block_from_mc_block(mc_block, None))
+    }
+
     /// Returns the [`Block`] with the given block id in its default state, or
     /// `None` if no such block exists.
     #[inline]
@@ -109,6 +116,10 @@ impl Blocks {
     ) -> Block<'_> {
         let mc_block = &self.blocks[index as usize];
 
+        Self::block_from_mc_block(mc_block, state_id)
+    }
+
+    fn block_from_mc_block<'a>(mc_block: &'a McBlock, state_id: Option<BlockStateId>) -> Block<'a> {
         let state_id =
             state_id.unwrap_or_else(|| BlockStateId(mc_block.default_state.unwrap() as IndexType));
 

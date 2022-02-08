@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf};
 
 use minecraft_assets::{
     api::{AssetPack, ModelResolver, ResourceLocation, Result},
@@ -16,6 +16,12 @@ use brine_data::{
 pub struct Textures {
     data: MinecraftData,
     assets: AssetPack,
+}
+
+impl fmt::Debug for Textures {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Textures").finish()
+    }
 }
 
 impl Textures {

@@ -1,21 +1,12 @@
-use std::borrow::Borrow;
-
 use indexmap::IndexMap;
 
-use crate::api::McModel;
+use crate::storage::CuboidKey;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Model {
-    pub resolved: McModel,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub struct ModelName(pub String);
-
-impl Borrow<str> for ModelName {
-    fn borrow(&self) -> &str {
-        self.0.as_str()
-    }
+    pub ambient_occlusion: bool,
+    pub first_cuboid: CuboidKey,
+    pub last_cuboid: CuboidKey,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
@@ -23,12 +14,16 @@ pub struct ModelKey(pub usize);
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct ModelTable {
-    models: IndexMap<ModelName, Model>,
+    models: IndexMap<String, Model>,
 }
 
 impl ModelTable {
-    pub fn insert(&mut self, name: String, model: Model) -> ModelKey {
-        let (index, _) = self.models.insert_full(ModelName(name), model);
+    pub fn count(&self) -> usize {
+        self.models.len()
+    }
+
+    pub fn insert(&mut self, name: &str, model: Model) -> ModelKey {
+        let (index, _) = self.models.insert_full(name.to_string(), model);
 
         ModelKey(index)
     }

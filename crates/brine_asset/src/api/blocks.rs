@@ -1,3 +1,5 @@
+use std::fmt;
+
 use minecraft_assets::{
     api::{AssetPack, Result},
     schemas::BlockStates,
@@ -11,6 +13,14 @@ use brine_data::{
 pub struct Blocks {
     data: MinecraftData,
     block_states: Vec<BlockStates>,
+}
+
+impl fmt::Debug for Blocks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Blocks")
+            .field("block_states", &self.block_states)
+            .finish()
+    }
 }
 
 impl Blocks {
@@ -35,12 +45,10 @@ impl Blocks {
         let num_blocks = data.blocks().count();
         let mut block_states: Vec<BlockStates> = vec![Default::default(); num_blocks];
 
-        assets.for_each_blockstates(|path| -> Result<_> {
-            let block_name = path.file_stem().unwrap().to_str().unwrap();
-
+        assets.for_each_blockstates(|block_name, path| -> Result<_> {
             //println!("Loading `{}` at {}", block_name, path.to_string_lossy());
 
-            if let Some(block_index) = data.blocks().name_to_block.get(block_name) {
+            if let Some(block_index) = data.blocks().name_to_block.get(block_name.as_str()) {
                 let blockstates: BlockStates = assets.load_resource_at_path(path)?;
 
                 block_states[*block_index as usize] = blockstates;

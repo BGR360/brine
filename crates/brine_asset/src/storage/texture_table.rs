@@ -8,7 +8,7 @@ pub struct Texture {
     pub path: PathBuf,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureKey(usize);
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

@@ -10,10 +10,11 @@ pub use brine_data::{
     blocks::{BlockId, BlockStateId},
     MinecraftData, Version,
 };
+use tracing::trace;
 
 use crate::{
-    bakery,
-    storage::{ModelTable, TextureTable},
+    bakery::{self, models::ModelBuilder},
+    storage::{CuboidTable, ModelTable, QuadTable, TextureTable},
 };
 
 mod blocks;
@@ -50,7 +51,7 @@ impl MinecraftAssets {
     }
 
     pub fn models(&self) -> Models<'_> {
-        Models::new(&self.inner.models)
+        Models::new(&self.inner)
     }
 
     pub fn textures(&self) -> &Textures {
@@ -58,27 +59,45 @@ impl MinecraftAssets {
     }
 }
 
-struct MinecraftAssetsInner {
-    blocks: Blocks,
-    models: ModelTable,
-    textures: Textures,
-    _texture_table: TextureTable,
+#[derive(Debug)]
+pub(crate) struct MinecraftAssetsInner {
+    pub(crate) blocks: Blocks,
+    pub(crate) cuboid_table: CuboidTable,
+    pub(crate) model_table: ModelTable,
+    pub(crate) quad_table: QuadTable,
+    pub(crate) textures: Textures,
+    pub(crate) texture_table: TextureTable,
 }
 
 impl MinecraftAssetsInner {
     fn build(root: &Path, data: &MinecraftData) -> Result<Self> {
         let assets = AssetPack::at_path(root);
 
-        let blocks = Blocks::build(&assets, data)?;
-        let models = bakery::models::build(&assets, data)?;
-        let textures = Textures::build(&assets, data)?;
         let texture_table = bakery::textures::build(&assets)?;
 
-        Ok(Self {
+        let ModelBuilder {
+            model_table,
+            cuboid_table,
+            quad_table,
+            ..
+        } = bakery::models::ModelBuilder::build(&assets, data, &texture_table)?;
+
+        let blocks = Blocks::build(&assets, data)?;
+        let textures = Textures::build(&assets, data)?;
+
+        trace!("Quad table: {:#?}", &quad_table);
+        trace!("Cuboid table: {:#?}", &cuboid_table);
+        trace!("Model table: {:#?}", &model_table);
+
+        let new = Self {
             blocks,
-            models,
+            cuboid_table,
+            model_table,
+            quad_table,
             textures,
-            _texture_table: texture_table,
-        })
+            texture_table,
+        };
+
+        Ok(new)
     }
 }
