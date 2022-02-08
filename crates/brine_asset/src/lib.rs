@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![allow(clippy::module_inception)]
 
 use std::{path::Path, sync::Arc};
 
@@ -13,11 +14,15 @@ pub use brine_data::{
 mod hash_slab;
 
 pub mod blocks;
+pub mod models;
 pub mod textures;
 
 pub use blocks::{BlockFace, Blocks};
 pub use hash_slab::HashSlab;
+pub use models::Models;
 pub use textures::Textures;
+
+use models::ModelTable;
 
 /// Provides access to Minecraft assets for a given assets directory.
 ///
@@ -42,6 +47,10 @@ impl MinecraftAssets {
         &self.inner.blocks
     }
 
+    pub fn models(&self) -> Models<'_> {
+        Models::new(&self.inner.models)
+    }
+
     pub fn textures(&self) -> &Textures {
         &self.inner.textures
     }
@@ -49,6 +58,7 @@ impl MinecraftAssets {
 
 struct MinecraftAssetsInner {
     blocks: Blocks,
+    models: ModelTable,
     textures: Textures,
 }
 
@@ -57,8 +67,13 @@ impl MinecraftAssetsInner {
         let assets = AssetPack::at_path(root);
 
         let blocks = Blocks::build(&assets, data)?;
+        let models = models::build(&assets, data)?;
         let textures = Textures::build(&assets, data)?;
 
-        Ok(Self { blocks, textures })
+        Ok(Self {
+            blocks,
+            models,
+            textures,
+        })
     }
 }
