@@ -1,16 +1,18 @@
-use minecraft_assets::api::{AssetPack, ModelResolver, Result};
+use minecraft_assets::{
+    api::{AssetPack, ModelResolver, Result},
+    schemas::models::Model as McModel,
+};
 
 use brine_data::MinecraftData;
 
-use crate::{
-    api::{McModel, Model},
-    storage::ModelTable,
-};
+use crate::storage::{Model, ModelTable};
 
-use super::unresolved_models::{UnresolvedModelLoader, UnresolvedModelTable};
+mod unresolved;
+
+use unresolved::UnresolvedModelTable;
 
 pub(crate) fn build(assets: &AssetPack, _data: &MinecraftData) -> Result<ModelTable> {
-    let unresolved = UnresolvedModelLoader::load_block_models(assets)?;
+    let unresolved = unresolved::load_block_models(assets)?;
 
     let mut resolved = ModelTable::default();
 

@@ -11,7 +11,10 @@ pub use brine_data::{
     MinecraftData, Version,
 };
 
-use crate::{bakery, storage::ModelTable};
+use crate::{
+    bakery,
+    storage::{ModelTable, TextureTable},
+};
 
 mod blocks;
 mod models;
@@ -20,7 +23,7 @@ mod textures;
 pub(crate) use models::McModel;
 
 pub use blocks::Blocks;
-pub use models::{Model, Models};
+pub use models::Models;
 pub use textures::Textures;
 
 /// Provides access to Minecraft assets for a given assets directory.
@@ -59,6 +62,7 @@ struct MinecraftAssetsInner {
     blocks: Blocks,
     models: ModelTable,
     textures: Textures,
+    _texture_table: TextureTable,
 }
 
 impl MinecraftAssetsInner {
@@ -68,11 +72,13 @@ impl MinecraftAssetsInner {
         let blocks = Blocks::build(&assets, data)?;
         let models = bakery::models::build(&assets, data)?;
         let textures = Textures::build(&assets, data)?;
+        let texture_table = bakery::textures::build(&assets)?;
 
         Ok(Self {
             blocks,
             models,
             textures,
+            _texture_table: texture_table,
         })
     }
 }

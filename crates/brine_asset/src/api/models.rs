@@ -1,11 +1,6 @@
 pub(crate) use minecraft_assets::schemas::Model as McModel;
 
-use crate::storage::{ModelKey, ModelTable};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Model {
-    pub resolved: McModel,
-}
+use crate::storage::{Model, ModelKey, ModelTable};
 
 pub struct Models<'a> {
     model_table: &'a ModelTable,
