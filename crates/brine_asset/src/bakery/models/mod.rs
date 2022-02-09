@@ -1,77 +1,97 @@
 use std::collections::HashMap;
 
-use brine_data::MinecraftData;
 use minecraft_assets::{
-    api::{AssetPack, ResourceIdentifier, Result},
+    api::{ModelIdentifier, ResourceIdentifier},
     schemas::models::{
         BlockFace, Element as McElement, ElementFace as McElementFace, Model as McModel,
     },
 };
-use tracing::{debug, info, trace};
+use tracing::{debug, warn};
 
 use crate::storage::{
-    Cuboid, CuboidKey, CuboidRotation, CuboidTable, Model, ModelTable, Quad, QuadKey, QuadRotation,
-    QuadTable, TextureTable,
+    Cuboid, CuboidKey, CuboidRotation, CuboidTable, Model, ModelKey, ModelTable, Quad, QuadKey,
+    QuadTable, QuarterRotation, TextureTable,
 };
 
-mod resolved;
-mod unresolved;
+pub(crate) mod resolved;
+pub(crate) mod unresolved;
+
+use resolved::ResolvedModelTable;
 
 #[derive(Debug)]
 pub(crate) struct ModelBuilder<'a> {
     pub(crate) model_table: ModelTable,
     pub(crate) cuboid_table: CuboidTable,
     pub(crate) quad_table: QuadTable,
-    texture_table: &'a TextureTable,
+    resolved_mc_models: &'a ResolvedModelTable,
+    textures: &'a TextureTable,
 }
 
 impl<'a> ModelBuilder<'a> {
-    pub fn build(
-        assets: &AssetPack,
-        data: &MinecraftData,
-        texture_table: &'a TextureTable,
-    ) -> Result<Self> {
-        let mut builder = Self {
-            texture_table,
+    pub fn new(resolved_mc_models: &'a ResolvedModelTable, textures: &'a TextureTable) -> Self {
+        Self {
+            resolved_mc_models,
+            textures,
             model_table: Default::default(),
             cuboid_table: Default::default(),
             quad_table: Default::default(),
-        };
-
-        let resolved_models = {
-            let unresolved_models = unresolved::load_block_models(assets)?;
-
-            resolved::resolve_models(&unresolved_models)
-        };
-
-        for (name, model) in resolved_models.0.iter() {
-            debug!("Building model {:?}", name);
-
-            if let Some(model) = builder.build_model(model) {
-                builder.model_table.insert(name, model);
-            }
         }
-
-        info!("Built {} models", builder.model_table.count());
-
-        Ok(builder)
     }
 
-    fn build_model(&mut self, mc_model: &McModel) -> Option<Model> {
+    // pub fn build(&mut self) -> Result<()> {
+    //     for (model_name, mc_model) in self.resolved_mc_models.0.iter() {
+    //         self.build_model(model_name, mc_model);
+    //     }
+
+    //     info!("Built {} models", self.model_table.count());
+
+    //     Ok(())
+    // }
+
+    pub fn get_or_build_model(&mut self, name: &str) -> Option<ModelKey> {
+        let model_id = ModelIdentifier::from(name);
+        let name = model_id.model_name();
+
+        if let Some(key) = self.model_table.get_key(name) {
+            return Some(key);
+        }
+
+        let mc_model = self.resolved_mc_models.0.get(name).or_else(|| {
+            let mut available_names = self.resolved_mc_models.0.keys().collect::<Vec<_>>();
+            available_names.sort();
+
+            warn!(
+                "No model for name {}. Available: {:#?}",
+                name, available_names
+            );
+
+            None
+        })?;
+
+        self.build_model(name, mc_model)
+    }
+
+    pub fn build_model(&mut self, name: &str, mc_model: &McModel) -> Option<ModelKey> {
+        debug!("Building model {:?}", name);
+
         let ambient_occlusion = mc_model.ambient_occlusion.unwrap_or(true);
 
         let (first_cuboid, last_cuboid) = self.build_cuboids(mc_model)?;
 
-        Some(Model {
+        let model = Model {
             ambient_occlusion,
             first_cuboid,
             last_cuboid,
-        })
+        };
+
+        let key = self.model_table.insert(name, model);
+
+        Some(key)
     }
 
-    fn build_cuboids(&mut self, mc_model: &McModel) -> Option<(CuboidKey, CuboidKey)> {
+    pub fn build_cuboids(&mut self, mc_model: &McModel) -> Option<(CuboidKey, CuboidKey)> {
         let mc_elements = &mc_model.elements.as_ref().or_else(|| {
-            trace!("No elements in model: {:#?}", mc_model);
+            warn!("No elements in model: {:#?}", mc_model);
             None
         })?[..];
 
@@ -81,14 +101,17 @@ impl<'a> ModelBuilder<'a> {
         let mut last = first;
 
         for mc_element in mc_elements {
-            let cuboid = self.build_cuboid(mc_model, mc_element)?;
-            last = self.cuboid_table.insert(cuboid);
+            last = self.build_cuboid(mc_model, mc_element)?;
         }
 
         Some((first, last))
     }
 
-    fn build_cuboid(&mut self, mc_model: &McModel, mc_element: &McElement) -> Option<Cuboid> {
+    pub fn build_cuboid(
+        &mut self,
+        mc_model: &McModel,
+        mc_element: &McElement,
+    ) -> Option<CuboidKey> {
         let from = mc_element.from;
         let to = mc_element.to;
         let rotation = CuboidRotation::from(mc_element.rotation.clone());
@@ -96,17 +119,21 @@ impl<'a> ModelBuilder<'a> {
 
         let (first_face, last_face) = self.build_quads(mc_model, &mc_element.faces)?;
 
-        Some(Cuboid {
+        let cuboid = Cuboid {
             from,
             to,
             rotation,
             shade,
             first_face,
             last_face,
-        })
+        };
+
+        let key = self.cuboid_table.insert(cuboid);
+
+        Some(key)
     }
 
-    fn build_quads(
+    pub fn build_quads(
         &mut self,
         mc_model: &McModel,
         mc_faces: &HashMap<BlockFace, McElementFace>,
@@ -117,23 +144,22 @@ impl<'a> ModelBuilder<'a> {
         let mut last = first;
 
         for (block_face, element_face) in mc_faces.iter() {
-            let quad = self.build_quad(mc_model, *block_face, element_face)?;
-            last = self.quad_table.insert(quad);
+            last = self.build_quad(mc_model, *block_face, element_face)?;
         }
 
         Some((first, last))
     }
 
-    fn build_quad(
-        &self,
+    pub fn build_quad(
+        &mut self,
         mc_model: &McModel,
         block_face: BlockFace,
         element_face: &McElementFace,
-    ) -> Option<Quad> {
+    ) -> Option<QuadKey> {
         let face = block_face;
         let uv = element_face.uv.unwrap_or_else(|| [0.0, 0.0, 16.0, 16.0]);
         let cull_face = element_face.cull_face;
-        let rotation = QuadRotation::from(element_face.rotation);
+        let rotation = QuarterRotation::from(element_face.rotation);
 
         let tint_index = match element_face.tint_index {
             -1 => None,
@@ -148,33 +174,36 @@ impl<'a> ModelBuilder<'a> {
             texture
                 .resolve(mc_model.textures.as_ref().unwrap())
                 .or_else(|| {
-                    trace!(
+                    warn!(
                         "Could not resolve texture variable: {:?}. Textures: {:#?}",
-                        element_face.texture,
-                        &mc_model.textures
+                        element_face.texture, &mc_model.textures
                     );
                     None
                 })?
         };
 
         let texture = self
-            .texture_table
+            .textures
             .get_key(&ResourceIdentifier::from(resolved_texture))
             .or_else(|| {
-                trace!(
+                warn!(
                     "Could not resolve texture identifier to a known texture: {}",
                     resolved_texture
                 );
                 None
             })?;
 
-        Some(Quad {
+        let quad = Quad {
             face,
             texture,
             uv,
             cull_face,
             rotation,
             tint_index,
-        })
+        };
+
+        let key = self.quad_table.insert(quad);
+
+        Some(key)
     }
 }

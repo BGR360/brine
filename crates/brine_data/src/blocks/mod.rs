@@ -5,5 +5,5 @@
 mod block;
 mod state;
 
-pub use block::{BlockId, BlockStateId, Blocks};
+pub use block::{Block, BlockId, BlockStateId, Blocks};
 pub use state::{BlockState, StateValue};

@@ -13,8 +13,8 @@ pub use brine_data::{
 use tracing::trace;
 
 use crate::{
-    bakery::{self, models::ModelBuilder},
-    storage::{CuboidTable, ModelTable, QuadTable, TextureTable},
+    bakery::{self, block_states::BlockStateBuilder, models::ModelBuilder},
+    storage::{BlockStateTable, CuboidTable, ModelTable, QuadTable, TextureTable},
 };
 
 mod blocks;
@@ -62,6 +62,7 @@ impl MinecraftAssets {
 #[derive(Debug)]
 pub(crate) struct MinecraftAssetsInner {
     pub(crate) blocks: Blocks,
+    pub(crate) block_state_table: BlockStateTable,
     pub(crate) cuboid_table: CuboidTable,
     pub(crate) model_table: ModelTable,
     pub(crate) quad_table: QuadTable,
@@ -73,14 +74,35 @@ impl MinecraftAssetsInner {
     fn build(root: &Path, data: &MinecraftData) -> Result<Self> {
         let assets = AssetPack::at_path(root);
 
-        let texture_table = bakery::textures::build(&assets)?;
+        let texture_table = bakery::textures::load_texture_paths(&assets)?;
+
+        let mc_models = {
+            let unresolved_models = bakery::models::unresolved::load_block_models(&assets)?;
+
+            bakery::models::resolved::resolve_models(&unresolved_models)
+        };
+
+        let mc_block_states = bakery::block_states::load_block_states(&assets)?;
+
+        let mut model_builder = ModelBuilder::new(&mc_models, &texture_table);
+
+        let mut block_state_builder =
+            BlockStateBuilder::new(&data, &mc_block_states, &mut model_builder);
+
+        block_state_builder.build()?;
+
+        // model_builder.build()?;
+
+        let BlockStateBuilder {
+            block_state_table, ..
+        } = block_state_builder;
 
         let ModelBuilder {
             model_table,
             cuboid_table,
             quad_table,
             ..
-        } = bakery::models::ModelBuilder::build(&assets, data, &texture_table)?;
+        } = model_builder;
 
         let blocks = Blocks::build(&assets, data)?;
         let textures = Textures::build(&assets, data)?;
@@ -91,6 +113,7 @@ impl MinecraftAssetsInner {
 
         let new = Self {
             blocks,
+            block_state_table,
             cuboid_table,
             model_table,
             quad_table,

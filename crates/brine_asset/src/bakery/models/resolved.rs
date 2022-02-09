@@ -16,10 +16,10 @@ pub fn resolve_models(unresolved: &UnresolvedModelTable) -> ResolvedModelTable {
     for (name, unresolved_model) in unresolved.0.iter() {
         debug!("Resolving {:?}", name);
 
-        if unresolved_model.parent.is_none() {
-            trace!("No parent, skipping");
-            continue;
-        }
+        // if unresolved_model.parent.is_none() {
+        //     trace!("No parent, skipping");
+        //     continue;
+        // }
 
         let resolved_model = resolve_model(unresolved, unresolved_model);
 

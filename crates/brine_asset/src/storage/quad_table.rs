@@ -1,44 +1,7 @@
-use std::fmt;
-
-use crate::{storage::TextureKey, BlockFace};
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
-pub enum QuadRotation {
-    Deg0,
-    Deg90,
-    Deg180,
-    Deg270,
-}
-
-impl Default for QuadRotation {
-    fn default() -> Self {
-        Self::Deg0
-    }
-}
-
-impl From<u32> for QuadRotation {
-    fn from(deg: u32) -> Self {
-        match deg {
-            0 => Self::Deg0,
-            90 => Self::Deg90,
-            180 => Self::Deg180,
-            270 => Self::Deg270,
-            _ => panic!("Invalid quad rotation: {}", deg),
-        }
-    }
-}
-
-impl fmt::Debug for QuadRotation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Deg0 => write!(f, "0"),
-            Self::Deg90 => write!(f, "90"),
-            Self::Deg180 => write!(f, "180"),
-            Self::Deg270 => write!(f, "270"),
-        }
-    }
-}
+use crate::{
+    storage::{QuarterRotation, TextureKey},
+    BlockFace,
+};
 
 /// A single quad (face) of a cuboid model element.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -56,7 +19,7 @@ pub struct Quad {
 
     pub cull_face: Option<BlockFace>,
 
-    pub rotation: QuadRotation,
+    pub rotation: QuarterRotation,
 
     pub tint_index: Option<u8>,
 }

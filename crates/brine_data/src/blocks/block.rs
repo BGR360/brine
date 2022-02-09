@@ -22,7 +22,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BlockStateId(pub IndexType);
 
 impl<T> From<T> for BlockStateId
@@ -76,10 +76,17 @@ impl Blocks {
     }
 
     #[inline]
-    pub fn all(&self) -> impl Iterator<Item = Block<'_>> + '_ {
+    pub fn iter_blocks(&self) -> impl Iterator<Item = Block<'_>> + '_ {
         self.blocks
             .iter()
             .map(|mc_block| Self::block_from_mc_block(mc_block, None))
+    }
+
+    #[inline]
+    pub fn iter_states(&self) -> impl Iterator<Item = Block<'_>> + '_ {
+        let max_state_id = self.blocks.last().unwrap().max_state_id.unwrap() as u16;
+
+        (0..max_state_id).map(|state_id| self.get_by_state_id(BlockStateId(state_id)).unwrap())
     }
 
     /// Returns the [`Block`] with the given block id in its default state, or
@@ -119,7 +126,7 @@ impl Blocks {
         Self::block_from_mc_block(mc_block, state_id)
     }
 
-    fn block_from_mc_block<'a>(mc_block: &'a McBlock, state_id: Option<BlockStateId>) -> Block<'a> {
+    fn block_from_mc_block(mc_block: &McBlock, state_id: Option<BlockStateId>) -> Block<'_> {
         let state_id =
             state_id.unwrap_or_else(|| BlockStateId(mc_block.default_state.unwrap() as IndexType));
 

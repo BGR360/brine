@@ -56,6 +56,12 @@ impl<'a> fmt::Debug for StateValue<'a> {
     }
 }
 
+impl<'a> fmt::Display for StateValue<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Self as fmt::Debug>::fmt(self, f)
+    }
+}
+
 impl<'a> From<&'a str> for StateValue<'a> {
     fn from(enum_value: &'a str) -> Self {
         Self::Enum(enum_value)
