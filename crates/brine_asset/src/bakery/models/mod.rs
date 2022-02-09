@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use minecraft_assets::{
     api::{ModelIdentifier, ResourceIdentifier},
@@ -23,6 +23,7 @@ pub(crate) struct ModelBuilder<'a> {
     pub(crate) model_table: ModelTable,
     pub(crate) cuboid_table: CuboidTable,
     pub(crate) quad_table: QuadTable,
+    known_nonexistent_models: HashSet<String>,
     resolved_mc_models: &'a ResolvedModelTable,
     textures: &'a TextureTable,
 }
@@ -35,6 +36,7 @@ impl<'a> ModelBuilder<'a> {
             model_table: Default::default(),
             cuboid_table: Default::default(),
             quad_table: Default::default(),
+            known_nonexistent_models: Default::default(),
         }
     }
 
@@ -56,6 +58,10 @@ impl<'a> ModelBuilder<'a> {
             return Some(key);
         }
 
+        if self.known_nonexistent_models.contains(name) {
+            return None;
+        }
+
         let mc_model = self.resolved_mc_models.0.get(name).or_else(|| {
             let mut available_names = self.resolved_mc_models.0.keys().collect::<Vec<_>>();
             available_names.sort();
@@ -68,7 +74,10 @@ impl<'a> ModelBuilder<'a> {
             None
         })?;
 
-        self.build_model(name, mc_model)
+        self.build_model(name, mc_model).or_else(|| {
+            self.known_nonexistent_models.insert(String::from(name));
+            None
+        })
     }
 
     pub fn build_model(&mut self, name: &str, mc_model: &McModel) -> Option<ModelKey> {

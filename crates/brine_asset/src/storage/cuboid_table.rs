@@ -101,6 +101,15 @@ pub struct Cuboid {
     pub last_face: QuadKey,
 }
 
+impl Cuboid {
+    pub fn quads(&self) -> impl Iterator<Item = QuadKey> + '_ {
+        let begin = self.first_face.0;
+        let end = self.last_face.0 + 1;
+
+        (begin..end).map(QuadKey)
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CuboidKey(pub usize);
 

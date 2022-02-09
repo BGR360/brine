@@ -9,6 +9,12 @@ pub struct Model {
     pub last_cuboid: CuboidKey,
 }
 
+impl Model {
+    pub fn num_cuboids(&self) -> usize {
+        self.last_cuboid.0 - self.first_cuboid.0 + 1
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModelKey(pub usize);
 

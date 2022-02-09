@@ -1,97 +1,105 @@
-use std::{fmt, path::PathBuf};
+use std::path::PathBuf;
 
-use minecraft_assets::{
-    api::{AssetPack, ModelResolver, ResourceLocation, Result},
-    schemas::{
-        blockstates::multipart::StateValue as McStateValue,
-        models::{BlockFace, Model},
-    },
-};
+use minecraft_assets::schemas::models::BlockFace;
 
-use brine_data::{
-    blocks::{BlockStateId, StateValue},
-    MinecraftData,
-};
+use brine_data::blocks::BlockStateId;
+use tracing::{debug, trace, warn};
 
-pub struct Textures {
-    data: MinecraftData,
-    assets: AssetPack,
+use crate::{api::MinecraftAssetsInner, storage::Quad};
+
+pub struct Textures<'a> {
+    parent: &'a MinecraftAssetsInner,
 }
-
-impl fmt::Debug for Textures {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Textures").finish()
+impl<'a> Textures<'a> {
+    pub(crate) fn new(parent: &'a MinecraftAssetsInner) -> Self {
+        Self { parent }
     }
-}
 
-impl Textures {
     pub fn get_texture_path(
         &self,
         block_state_id: BlockStateId,
         face: BlockFace,
     ) -> Option<PathBuf> {
-        let model = self.get_model(block_state_id)?;
-        let model_textures = model.textures.as_ref()?;
+        trace!("Querying texture for {:?}:{:?}", block_state_id, face);
 
-        let first_element = &model.elements?[0];
+        let block_state = self
+            .parent
+            .block_state_table
+            .get_by_key(block_state_id)
+            .or_else(|| {
+                warn!("No block for {:?}", block_state_id);
+                None
+            })?;
 
-        let element_face = first_element
-            .faces
-            .get(&face)
-            .unwrap_or_else(|| first_element.faces.values().next().as_ref().unwrap());
+        trace!("{:#?}", block_state);
 
-        let texture = &element_face.texture;
+        let grab_bag = block_state.models.first().or_else(|| {
+            warn!("{:?} has no models!", block_state_id);
+            None
+        })?;
 
-        let texture_path = texture
-            .resolve(model_textures)
-            .or_else(|| texture.location())?;
+        // TODO: pick random model from grab bag.
+        let model_key = grab_bag
+            .choices
+            .get(0)
+            .or_else(|| {
+                warn!("{:?} has no models!", block_state_id);
+                None
+            })?
+            .model;
 
-        let path = self
-            .assets
-            .get_resource_path(&ResourceLocation::Texture(texture_path.into()));
+        if block_state.models.len() > 1 {
+            debug!(
+                "{:?} is composed of multiple models, using the first one",
+                block_state_id
+            );
+        }
 
-        Some(path.strip_prefix("assets").unwrap().into())
-    }
+        let model = self.parent.model_table.get_by_key(model_key).unwrap();
 
-    fn get_model(&self, block_state_id: BlockStateId) -> Option<Model> {
-        let block = self.data.blocks().get_by_state_id(block_state_id)?;
+        trace!("{:#?}", model);
 
-        let name = &block.name;
-        let blockstates = self.assets.load_blockstates(name).ok()?;
+        if model.num_cuboids() > 1 {
+            debug!(
+                "{:?} for {:?} has more than one cuboid element, using the first one",
+                model_key, block_state_id
+            );
+        }
 
-        let cases = blockstates.into_multipart();
+        let cuboid = self
+            .parent
+            .cuboid_table
+            .get_by_key(model.first_cuboid)
+            .unwrap();
 
-        let state_values: Vec<(&str, McStateValue)> = block
-            .state
-            .iter()
-            .map(|(state, value)| (*state, state_value_to_mc_state_value(value)))
+        trace!("{:#?}", cuboid);
+
+        let quads: Vec<&Quad> = cuboid
+            .quads()
+            .map(|quad_key| self.parent.quad_table.get_by_key(quad_key).unwrap())
             .collect();
 
-        let first_case_that_applies = cases
+        let quad = quads
             .iter()
-            .find(|case| case.applies(state_values.iter().map(|(state, value)| (*state, value))))?;
+            .find(|quad| {
+                trace!("{:#?}", quad);
+                quad.face == face
+            })
+            .or_else(|| {
+                debug!(
+                    "Cuboid of {:?} for {:?} has no quad on block face {:?}",
+                    model_key, block_state_id, face
+                );
 
-        let model_name = &first_case_that_applies.apply.models()[0].model;
+                quads.first()
+            })?;
 
-        let models = self.assets.load_block_model_recursive(model_name).ok()?;
+        let texture_key = quad.texture;
 
-        let model = ModelResolver::resolve_model(models.iter());
+        let texture = self.parent.texture_table.get_by_key(texture_key).unwrap();
 
-        Some(model)
-    }
+        trace!("{:#?}", texture);
 
-    pub(crate) fn build(assets: &AssetPack, data: &MinecraftData) -> Result<Self> {
-        Ok(Self {
-            assets: assets.clone(),
-            data: data.clone(),
-        })
-    }
-}
-
-pub(crate) fn state_value_to_mc_state_value(state_value: &StateValue) -> McStateValue {
-    match state_value {
-        StateValue::Bool(b) => McStateValue::from(*b),
-        StateValue::Enum(value) => McStateValue::from(*value),
-        StateValue::Int(i) => McStateValue::from(i.to_string()),
+        Some(texture.path.strip_prefix("assets").unwrap().into())
     }
 }
