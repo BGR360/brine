@@ -4,6 +4,7 @@
 //! utility binaries in `src/bin/`.
 
 pub mod chunk;
+pub mod debug;
 pub mod error;
 pub mod login;
 pub mod server;

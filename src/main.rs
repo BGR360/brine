@@ -4,9 +4,7 @@ use std::path::PathBuf;
 
 use bevy::{
     log::{Level, LogSettings},
-    pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
-    render::{options::WgpuOptions, render_resource::WgpuFeatures},
 };
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use bevy_inspector_egui::prelude::*;
@@ -24,7 +22,10 @@ use brine_voxel::{
     texture::TextureBuilderPlugin,
 };
 
-use brine::{login::LoginPlugin, server::ServeChunksFromDirectoryPlugin, DEFAULT_LOG_FILTER};
+use brine::{
+    debug::DebugWireframePlugin, login::LoginPlugin, server::ServeChunksFromDirectoryPlugin,
+    DEFAULT_LOG_FILTER,
+};
 
 const SERVER: &str = "localhost:25565";
 const USERNAME: &str = "user";
@@ -90,18 +91,13 @@ pub struct MinecraftWorldViewerPlugin;
 
 impl Plugin for MinecraftWorldViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(WgpuOptions {
-            features: WgpuFeatures::POLYGON_MODE_LINE,
-            ..Default::default()
-        })
-        .insert_resource(WireframeConfig { global: true })
-        .insert_resource(Msaa { samples: 4 })
-        .add_plugin(WireframePlugin)
-        .add_plugin(FlyCameraPlugin)
-        .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
-        // .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
-        .add_startup_system(set_up_camera)
-        .add_system(give_chunk_sections_correct_y_height);
+        app.insert_resource(Msaa { samples: 4 })
+            .add_plugin(DebugWireframePlugin)
+            .add_plugin(FlyCameraPlugin)
+            .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
+            // .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
+            .add_startup_system(set_up_camera)
+            .add_system(give_chunk_sections_correct_y_height);
     }
 }
 
