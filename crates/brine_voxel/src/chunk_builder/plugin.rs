@@ -273,7 +273,15 @@ where
         mut texture_builder: ResMut<BlockTextures>,
         mut commands: Commands,
     ) {
-        for (entity, mut pending_chunk, mut mesher_task) in chunks_with_pending_meshes.iter_mut() {
+        const MAX_PER_FRAME: usize = 1;
+
+        for (i, (entity, mut pending_chunk, mut mesher_task)) in
+            chunks_with_pending_meshes.iter_mut().enumerate()
+        {
+            if i >= MAX_PER_FRAME {
+                break;
+            }
+
             if pending_chunk.builder != T::TYPE {
                 continue;
             }
