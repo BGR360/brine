@@ -33,4 +33,5 @@ brine_data = { path = "./crates/brine_data" }
 brine_net = { path = "./crates/brine_net" }
 brine_proto = { path = "./crates/brine_proto" }
 brine_proto_backend = { path = "./crates/brine_proto_backend" }
+brine_voxel = { path = "./crates/brine_voxel" }
 brine_voxel_v1 = { path = "./crates/brine_voxel_v1" }
