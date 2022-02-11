@@ -14,7 +14,7 @@ use clap::Parser;
 
 use brine_proto::{AlwaysSuccessfulLoginPlugin, ProtocolPlugin};
 use brine_proto_backend::ProtocolBackendPlugin;
-use brine_voxel::{
+use brine_voxel_v1::{
     chunk_builder::{
         component::BuiltChunkSection, ChunkBuilderPlugin, GreedyQuadsChunkBuilder,
         VisibleFacesChunkBuilder,

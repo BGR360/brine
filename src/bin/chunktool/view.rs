@@ -15,7 +15,7 @@ use brine_asset::MinecraftAssets;
 use brine_chunk::{Chunk, ChunkSection};
 use brine_data::MinecraftData;
 use brine_proto::{event, ProtocolPlugin};
-use brine_voxel::{
+use brine_voxel_v1::{
     chunk_builder::{
         component::{BuiltChunk, BuiltChunkSection},
         ChunkBuilderPlugin, GreedyQuadsChunkBuilder, NaiveBlocksChunkBuilder,
@@ -217,7 +217,7 @@ impl ChunkViewerPlugin {
         for (mut transform, built_chunk) in query.iter_mut() {
             transform.rotate(Quat::from_rotation_y(PI / 4.0));
 
-            use brine_voxel::chunk_builder::ChunkBuilderType;
+            use brine_voxel_v1::chunk_builder::ChunkBuilderType;
             match built_chunk.builder {
                 ChunkBuilderType::NAIVE_BLOCKS => {
                     transform.translation = -Vec3::X * DISTANCE_FROM_ORIGIN;

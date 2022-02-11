@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use brine_asset::{BlockFace, MinecraftAssets};
 
 use brine_data::{blocks::BlockStateId, MinecraftData};
-use brine_voxel::texture::{BlockTextures, TextureBuilderPlugin};
+use brine_voxel_v1::texture::{BlockTextures, TextureBuilderPlugin};
 
 fn main() {
     let mc_data = MinecraftData::for_version("1.14.4");
