@@ -1129,6 +1129,12 @@ dependencies = [
 [[package]]
 name = "brine_voxel"
 version = "0.0.0"
+dependencies = [
+ "bevy",
+ "fastrand",
+ "glam 0.19.0",
+ "num-traits",
+]
 
 [[package]]
 name = "brine_voxel_v1"

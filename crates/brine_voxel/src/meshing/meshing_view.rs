@@ -6,7 +6,7 @@ use crate::{Direction, IndexTy, VoxelView};
 /// [`Mesher`]: super::Mesher
 /// [`Mesh`]: super::Mesh
 pub trait MeshingView: VoxelView {
-    type Quads: IntoIterator<Item = ()>;
+    type Quads: IntoIterator<Item = [[f32; 3]; 4]>;
 
     /// Returns true if the voxel at index `[x, y, z]` has no geometry to
     /// provide to the mesh.

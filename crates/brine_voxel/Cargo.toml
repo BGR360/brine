@@ -4,3 +4,9 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+glam = "0.19"
+num-traits = "0.2"
+
+[dev-dependencies]
+bevy = "0.6"
+fastrand = "1"
