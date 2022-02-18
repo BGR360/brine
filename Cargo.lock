@@ -1036,6 +1036,7 @@ dependencies = [
  "brine_net",
  "brine_proto",
  "brine_proto_backend",
+ "brine_render",
  "brine_voxel",
  "brine_voxel_v1",
  "clap",
