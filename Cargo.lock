@@ -1118,6 +1118,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "brine_render"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+ "brine_asset",
+ "brine_data",
+ "brine_voxel",
+]
+
+[[package]]
 name = "brine_voxel"
 version = "0.0.0"
 dependencies = [

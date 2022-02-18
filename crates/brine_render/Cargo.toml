@@ -1,0 +1,11 @@
+[package]
+name = "brine_render"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.6"
+
+brine_asset = { path = "../brine_asset" }
+brine_data = { path = "../brine_data" }
+brine_voxel = { path = "../brine_voxel" }
