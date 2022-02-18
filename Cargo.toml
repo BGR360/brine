@@ -17,7 +17,7 @@ members = [
 opt-level = 3
 
 [dependencies]
-bevy = { version = "0.6.0", features = ["dynamic"] }
+bevy = { version = "0.6.1", features = ["dynamic"] }
 bevy_fly_camera = "0.8"
 bevy-inspector-egui = "0.7"
 clap = { version = "3", features = ["derive"] }
