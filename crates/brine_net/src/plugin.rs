@@ -3,12 +3,14 @@
 use std::{any::Any, fmt::Debug, marker::PhantomData};
 
 use async_codec::{Decode, Encode};
-use bevy_app::{App, CoreStage, Plugin};
-use bevy_ecs::{
-    event::{EventWriter, Events},
-    system::{Res, ResMut},
+use bevy::{
+    app::{App, CoreStage, Plugin},
+    ecs::{
+        event::{EventWriter, Events},
+        system::{Res, ResMut},
+    },
+    tasks::IoTaskPool,
 };
-use bevy_tasks::IoTaskPool;
 
 use crate::{
     event::NetworkEvent,
@@ -59,7 +61,7 @@ pub type CodecWriter<'w, 's, Codec> =
 ///
 /// The plugin expects no resources to exist.
 ///
-/// [`EventReader`]: bevy_ecs::event::EventReader
+/// [`EventReader`]: bevy::ecs::event::EventReader
 pub struct NetworkPlugin<Codec> {
     _phantom: PhantomData<Codec>,
 }

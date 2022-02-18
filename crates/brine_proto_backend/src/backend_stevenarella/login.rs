@@ -34,9 +34,7 @@
 
 use std::str::FromStr;
 
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_log::prelude::*;
+use bevy::prelude::*;
 use steven_protocol::protocol::{Serializable, VarInt};
 
 use brine_net::{CodecReader, CodecWriter, NetworkError, NetworkEvent, NetworkResource};

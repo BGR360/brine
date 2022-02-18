@@ -4,9 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.6"
-bevy_ecs = "0.6"
-bevy_log = "0.6"
+bevy = { version = "0.6", default-features = false }
 pretty-hex = "0.2"
 serde_json = "1"
 
@@ -20,4 +18,3 @@ assert_matches = "1"
 async-std = { version = "1", features = ["attributes"] }
 async-codec = "0.4"
 futures = "0.3"
-uuid = "0.7" # should be 0.8 to match other crates, but minecraft-proto is behind

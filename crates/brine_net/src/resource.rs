@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use async_channel::{unbounded, Receiver, Sender};
 use async_codec::{Decode, Encode};
-use bevy_tasks::{Task, TaskPool};
+use bevy::tasks::{Task, TaskPool};
 
 use crate::{
     connection::Connection,
@@ -26,7 +26,7 @@ where
     pub(crate) network_event_sender: Sender<NetworkEvent<Codec>>,
 
     /// Used by the plugin to forward [`NetworkEvent`]s through an
-    /// [`EventWriter`][bevy_ecs::event::EventWriter].
+    /// [`EventWriter`][bevy::ecs::event::EventWriter].
     pub(crate) network_event_receiver: Receiver<NetworkEvent<Codec>>,
 
     /// Used by the [`CodecWriter`][crate::system_param::CodecWriter] to produce

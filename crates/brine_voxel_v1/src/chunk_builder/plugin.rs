@@ -46,7 +46,7 @@ impl<T: ChunkBuilder> ChunkBuilderPlugin<T> {
     /// [`Events::drain()`]) so they can be moved into the builder task rather
     /// than cloned.
     ///
-    /// [`Events::drain()`]: bevy_ecs::event::Events::drain
+    /// [`Events::drain()`]: bevy::ecs::event::Events::drain
     ///
     /// This constructor allows multiple chunk builder plugins to exist
     /// simultaneously without them clobbering each other. It forces the plugin

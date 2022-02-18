@@ -733,7 +733,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
- "uuid 0.8.2",
+ "uuid",
 ]
 
 [[package]]
@@ -788,7 +788,7 @@ dependencies = [
  "ron",
  "serde",
  "thiserror",
- "uuid 0.8.2",
+ "uuid",
 ]
 
 [[package]]
@@ -908,7 +908,7 @@ dependencies = [
  "getrandom",
  "instant",
  "tracing",
- "uuid 0.8.2",
+ "uuid",
 ]
 
 [[package]]
@@ -1084,10 +1084,6 @@ dependencies = [
  "async-codec",
  "async-net",
  "bevy",
- "bevy_app",
- "bevy_ecs",
- "bevy_log",
- "bevy_tasks",
  "byteorder",
  "crossbeam-channel",
  "futures",
@@ -1099,11 +1095,9 @@ dependencies = [
 name = "brine_proto"
 version = "0.0.0"
 dependencies = [
- "bevy_app",
- "bevy_ecs",
- "bevy_log",
+ "bevy",
  "brine_chunk",
- "uuid 0.8.2",
+ "uuid",
 ]
 
 [[package]]
@@ -1113,9 +1107,7 @@ dependencies = [
  "assert_matches",
  "async-codec",
  "async-std",
- "bevy_app",
- "bevy_ecs",
- "bevy_log",
+ "bevy",
  "brine_chunk",
  "brine_net",
  "brine_proto",
@@ -1123,7 +1115,6 @@ dependencies = [
  "pretty-hex",
  "serde_json",
  "steven_protocol",
- "uuid 0.7.4",
 ]
 
 [[package]]
@@ -1992,7 +1983,7 @@ dependencies = [
  "fnv",
  "gilrs-core",
  "log",
- "uuid 0.8.2",
+ "uuid",
  "vec_map",
 ]
 
@@ -2011,7 +2002,7 @@ dependencies = [
  "nix",
  "rusty-xinput",
  "stdweb 0.4.20",
- "uuid 0.8.2",
+ "uuid",
  "vec_map",
  "web-sys",
  "winapi",
@@ -4148,12 +4139,6 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
-
-[[package]]
-name = "uuid"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
 
 [[package]]
 name = "uuid"

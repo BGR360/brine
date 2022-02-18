@@ -3,7 +3,7 @@ use std::{any::Any, fmt::Debug};
 use async_channel::{Receiver, Sender};
 use async_codec::{Decode, Encode, Framed, ReadFrameError, WriteFrameError};
 use async_net::TcpStream;
-use bevy_log as log;
+use bevy::log;
 use futures::{FutureExt, SinkExt, StreamExt};
 
 use crate::{event::NetworkError, resource::NetworkResource, NetworkEvent};

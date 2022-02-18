@@ -7,7 +7,7 @@ mod login;
 
 pub use codec::ProtocolCodec;
 
-pub(crate) fn build(app: &mut bevy_app::App) {
+pub(crate) fn build(app: &mut bevy::app::App) {
     chunks::build(app);
     login::build(app);
 }

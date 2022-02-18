@@ -1,4 +1,4 @@
-use bevy_app::prelude::*;
+use bevy::app::{App, Plugin};
 
 use crate::event;
 

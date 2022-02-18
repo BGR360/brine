@@ -1,8 +1,6 @@
 //! Plugins exported by this crate.
 
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_log as log;
+use bevy::prelude::*;
 
 use brine_net::{NetworkEvent, NetworkPlugin};
 
@@ -41,7 +39,7 @@ impl Plugin for ProtocolBackendPlugin {
 fn log_network_errors(mut event_reader: EventReader<NetworkEvent<ProtocolCodec>>) {
     for event in event_reader.iter() {
         if let NetworkEvent::Error(network_error) = event {
-            log::warn!("Network error: {}", network_error);
+            warn!("Network error: {}", network_error);
         }
     }
 }

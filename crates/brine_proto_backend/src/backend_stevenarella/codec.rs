@@ -3,7 +3,7 @@ use std::{
     ops::Deref,
 };
 
-use bevy_log as log;
+use bevy::log;
 use steven_protocol::protocol::{self, State, VarInt};
 pub use steven_protocol::protocol::{packet, Direction, Error, PacketType, Serializable};
 

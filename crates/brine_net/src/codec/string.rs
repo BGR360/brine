@@ -1,7 +1,7 @@
 use std::{mem, str::Utf8Error};
 
 use async_codec::{Decode, DecodeResult, Encode, EncodeResult};
-use bevy_log as log;
+use bevy::log;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 /// A simple codec that sends and receives length-prefixed strings.
