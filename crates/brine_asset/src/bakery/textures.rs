@@ -1,21 +1,23 @@
-use std::path::PathBuf;
+use std::path::Path;
 
-use minecraft_assets::api::{AssetPack, Result};
+use minecraft_assets::api::{AssetPack, ResourceKind, ResourcePath, Result};
 
 use crate::storage::{Texture, TextureTable};
 
-pub fn load_texture_paths(assets: &AssetPack) -> Result<TextureTable> {
+pub fn load_texture_paths(root_dir: impl AsRef<Path>, assets: &AssetPack) -> Result<TextureTable> {
     let mut table = TextureTable::default();
 
-    assets.for_each_texture(|name, path| -> Result<()> {
+    for texture_location in assets
+        .enumerate_resources("minecraft", ResourceKind::Texture)?
+        .into_iter()
+    {
+        let path = ResourcePath::for_resource(root_dir.as_ref(), &texture_location);
         let texture = Texture {
-            path: PathBuf::from(path),
+            path: path.into_inner(),
         };
 
-        table.insert(name, texture);
-
-        Ok(())
-    })?;
+        table.insert(&texture_location, texture);
+    }
 
     Ok(table)
 }

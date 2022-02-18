@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use minecraft_assets::{
-    api::AssetPack,
+    api::{AssetPack, ResourceKind},
     schemas::blockstates::{
         multipart::StateValue as McStateValue, BlockStates as McBlockStates,
         ModelProperties as McModelProperties, Variant as McBlockVariant,
@@ -137,13 +137,14 @@ pub struct McBlockStatesTable(pub HashMap<String, McBlockStates>);
 pub fn load_block_states(assets: &AssetPack) -> Result<McBlockStatesTable> {
     let mut table = McBlockStatesTable::default();
 
-    assets.for_each_blockstates(|name, path| -> Result<()> {
-        let block_states: McBlockStates = assets.load_resource_at_path(path)?;
+    for loc in assets
+        .enumerate_resources("minecraft", ResourceKind::BlockStates)?
+        .into_iter()
+    {
+        let block_states = assets.load_blockstates(loc.as_str())?;
 
-        table.0.insert(name.as_str().to_string(), block_states);
-
-        Ok(())
-    })?;
+        table.0.insert(loc.as_str().to_string(), block_states);
+    }
 
     Ok(table)
 }

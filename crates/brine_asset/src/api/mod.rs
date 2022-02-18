@@ -71,7 +71,7 @@ impl MinecraftAssetsInner {
     fn build(root: &Path, data: &MinecraftData) -> Result<Self> {
         let assets = AssetPack::at_path(root);
 
-        let texture_table = bakery::textures::load_texture_paths(&assets)?;
+        let texture_table = bakery::textures::load_texture_paths(root, &assets)?;
 
         let mc_models = {
             let unresolved_models = bakery::models::unresolved::load_block_models(&assets)?;

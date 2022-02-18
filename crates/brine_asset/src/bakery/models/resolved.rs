@@ -23,11 +23,9 @@ pub fn resolve_models(unresolved: &UnresolvedModelTable) -> ResolvedModelTable {
 
         let resolved_model = resolve_model(unresolved, unresolved_model);
 
-        let model_id = ModelIdentifier::from(name);
+        let model_name = ModelIdentifier::model_name(name);
 
-        table
-            .0
-            .insert(model_id.model_name().to_string(), resolved_model);
+        table.0.insert(model_name.to_string(), resolved_model);
     }
 
     table
@@ -39,9 +37,7 @@ fn resolve_model<'a>(unresolved: &'a UnresolvedModelTable, mut model: &'a McMode
     while let Some(parent_name) = model.parent.as_ref() {
         trace!("parent: {:?}", parent_name);
 
-        let parent_id = ModelIdentifier::from(parent_name);
-
-        if let Some(parent) = unresolved.0.get(parent_id.model_name()) {
+        if let Some(parent) = unresolved.0.get(ModelIdentifier::model_name(parent_name)) {
             parents.push(parent);
 
             model = parent;

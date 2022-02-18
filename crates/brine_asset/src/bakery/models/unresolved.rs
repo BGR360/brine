@@ -1,6 +1,6 @@
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
-use minecraft_assets::api::{AssetPack, ModelIdentifier, ResourceIdentifier, Result};
+use minecraft_assets::api::{AssetPack, ModelIdentifier, ResourceKind, Result};
 use tracing::debug;
 
 use crate::api::McModel;
@@ -9,34 +9,35 @@ use crate::api::McModel;
 pub struct UnresolvedModelTable(pub HashMap<String, McModel>);
 
 pub fn load_block_models(assets: &AssetPack) -> Result<UnresolvedModelTable> {
-    let mut table = Default::default();
+    let mut table = UnresolvedModelTable::default();
 
-    assets.for_each_block_model(|name, path| load_model(assets, name, path, &mut table))?;
+    for loc in assets
+        .enumerate_resources("minecraft", ResourceKind::BlockModel)?
+        .into_iter()
+    {
+        debug!("Loading model {:?}", loc.as_str());
+
+        let model_name = ModelIdentifier::model_name(loc.as_str());
+        let model = assets.load_block_model(model_name)?;
+        table.0.insert(model_name.to_string(), model);
+    }
 
     Ok(table)
 }
 
 pub fn _load_item_models(assets: &AssetPack) -> Result<UnresolvedModelTable> {
-    let mut table = Default::default();
+    let mut table = UnresolvedModelTable::default();
 
-    assets.for_each_item_model(|name, path| load_model(assets, name, path, &mut table))?;
+    for loc in assets
+        .enumerate_resources("minecraft", ResourceKind::ItemModel)?
+        .into_iter()
+    {
+        debug!("Loading model {:?}", loc.as_str());
+
+        let model_name = ModelIdentifier::model_name(loc.as_str());
+        let model = assets.load_item_model(model_name)?;
+        table.0.insert(model_name.to_string(), model);
+    }
 
     Ok(table)
-}
-
-fn load_model(
-    assets: &AssetPack,
-    name: &ResourceIdentifier,
-    path: &Path,
-    table: &mut UnresolvedModelTable,
-) -> Result<()> {
-    debug!("Loading model {:?}", name);
-
-    let model: McModel = assets.load_resource_at_path(path)?;
-
-    let model_id = ModelIdentifier::from(name.into_owned());
-
-    table.0.insert(model_id.model_name().to_string(), model);
-
-    Ok(())
 }

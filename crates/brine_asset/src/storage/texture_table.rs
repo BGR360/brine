@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use indexmap::IndexMap;
-use minecraft_assets::api::ResourceIdentifier;
+use minecraft_assets::api::ResourceLocation;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Texture {
@@ -13,13 +13,13 @@ pub struct TextureKey(usize);
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TextureTable {
-    textures: IndexMap<ResourceIdentifier<'static>, Texture>,
+    textures: IndexMap<ResourceLocation<'static>, Texture>,
 }
 
 impl TextureTable {
     #[inline]
-    pub fn insert(&mut self, name: &ResourceIdentifier, texture: Texture) -> TextureKey {
-        let (index, _) = self.textures.insert_full(name.into_owned(), texture);
+    pub fn insert(&mut self, name: &ResourceLocation, texture: Texture) -> TextureKey {
+        let (index, _) = self.textures.insert_full(name.to_owned(), texture);
 
         TextureKey(index)
     }
@@ -32,7 +32,7 @@ impl TextureTable {
     }
 
     #[inline]
-    pub fn get_key(&self, name: &ResourceIdentifier) -> Option<TextureKey> {
+    pub fn get_key(&self, name: &ResourceLocation) -> Option<TextureKey> {
         self.textures.get_index_of(name).map(TextureKey)
     }
 }
