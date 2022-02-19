@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use minecraft_assets::{
-    api::{ModelIdentifier, ResourceLocation},
+    api::{ModelIdentifier, ResourceIdentifier},
     schemas::models::{
         BlockFace, Element as McElement, ElementFace as McElementFace, Model as McModel,
     },
@@ -192,7 +192,7 @@ impl<'a> ModelBuilder<'a> {
 
         let texture = self
             .textures
-            .get_key(&ResourceLocation::texture(resolved_texture))
+            .get_key(&ResourceIdentifier::texture(resolved_texture))
             .or_else(|| {
                 warn!(
                     "Could not resolve texture identifier to a known texture: {}",
