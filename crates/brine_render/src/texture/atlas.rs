@@ -1,12 +1,4 @@
-use bevy::{
-    asset::{Assets, Handle},
-    log::*,
-    math::Vec2,
-    reflect::TypeUuid,
-    render::texture::Image,
-    sprite::Rect,
-    utils::HashMap,
-};
+use bevy::{prelude::*, reflect::TypeUuid, sprite::Rect, utils::HashMap};
 
 use brine_asset::storage::TextureKey;
 
@@ -42,6 +34,7 @@ impl TextureAtlas {
         assets: &mut Assets<Image>,
         textures: T,
         placeholder_texture: &Handle<Image>,
+        max_texture_size: u32,
     ) -> Self
     where
         T: IntoIterator<Item = (TextureKey, &'a Handle<Image>)>,
@@ -50,11 +43,11 @@ impl TextureAtlas {
 
         debug!("Stitching texture atlas with {} textures", textures.len());
 
-        let mut builder = bevy::sprite::TextureAtlasBuilder::default();
+        let mut builder = bevy::sprite::TextureAtlasBuilder::default()
+            .max_size(Vec2::new(max_texture_size as f32, max_texture_size as f32));
 
-        // Place the largest textures first.
-        for (_, handle) in textures.iter().rev() {
-            let image = assets.get(*handle).unwrap();
+        for (_, handle) in textures.iter() {
+            let image = assets.get(*handle).expect("all textures must be loaded");
             builder.add_texture(handle.clone_weak(), image);
         }
 

@@ -2,17 +2,11 @@ use bevy::prelude::*;
 
 use crate::texture::{TextureAtlas, TextureManager};
 
-const PLACEHOLDER_PATH: &str = "placeholder.png";
-
 pub struct TextureManagerPlugin;
 
 impl Plugin for TextureManagerPlugin {
     fn build(&self, app: &mut App) {
-        let asset_server = app.world.get_resource::<AssetServer>().unwrap();
-        let placeholder_texture = asset_server.load(PLACEHOLDER_PATH);
-
-        let manager = TextureManager::new(placeholder_texture);
-        app.insert_resource(manager);
+        app.init_resource::<TextureManager>();
         app.add_asset::<TextureAtlas>();
         app.add_system(stitch_pending_atlases);
     }
