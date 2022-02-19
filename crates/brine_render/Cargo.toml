@@ -9,3 +9,6 @@ bevy = "0.6"
 brine_asset = { path = "../brine_asset" }
 brine_data = { path = "../brine_data" }
 brine_voxel = { path = "../brine_voxel" }
+
+[dev-dependencies]
+minecraft-assets = { path = "../minecraft-assets-rs" }

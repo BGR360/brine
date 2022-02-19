@@ -46,22 +46,11 @@ impl TextureAtlas {
     where
         T: IntoIterator<Item = (TextureKey, &'a Handle<Image>)>,
     {
-        let mut textures: Vec<(TextureKey, &Handle<Image>)> = textures.into_iter().collect();
+        let textures: Vec<(TextureKey, &Handle<Image>)> = textures.into_iter().collect();
 
         debug!("Stitching texture atlas with {} textures", textures.len());
 
-        trace!("Sorting textures by size");
-
-        // Sort textures by their longest side, to optimize placement.
-        textures.sort_by_cached_key(|(_, handle)| {
-            let image = assets.get(*handle).expect("All textures must be loaded");
-            let size = image.texture_descriptor.size;
-            std::cmp::max(size.width, size.height)
-        });
-
         let mut builder = bevy::sprite::TextureAtlasBuilder::default();
-
-        trace!("Adding textures to builder");
 
         // Place the largest textures first.
         for (_, handle) in textures.iter().rev() {
@@ -69,11 +58,12 @@ impl TextureAtlas {
             builder.add_texture(handle.clone_weak(), image);
         }
 
-        trace!("Stitching atlas");
+        builder.add_texture(
+            placeholder_texture.clone_weak(),
+            assets.get(placeholder_texture).unwrap(),
+        );
 
         let bevy_atlas = builder.finish(assets).unwrap();
-
-        trace!("Mapping keys to regions");
 
         let atlas_image = assets.get(&bevy_atlas.texture).unwrap();
         let atlas_size = atlas_image.texture_descriptor.size;

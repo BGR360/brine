@@ -1,4 +1,4 @@
-use bevy::{app::prelude::*, asset::prelude::*, ecs::prelude::*, render::texture::Image};
+use bevy::prelude::*;
 
 use crate::texture::{TextureAtlas, TextureManager};
 
@@ -13,7 +13,7 @@ impl Plugin for TextureManagerPlugin {
 
         let manager = TextureManager::new(placeholder_texture);
         app.insert_resource(manager);
-
+        app.add_asset::<TextureAtlas>();
         app.add_system(stitch_pending_atlases);
     }
 }
