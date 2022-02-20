@@ -7,8 +7,10 @@ edition = "2021"
 bevy = "0.6"
 
 brine_asset = { path = "../brine_asset" }
+brine_chunk = { path = "../brine_chunk" }
 brine_data = { path = "../brine_data" }
 brine_voxel = { path = "../brine_voxel" }
 
 [dev-dependencies]
+fastrand = "1"
 minecraft-assets = { path = "../minecraft-assets-rs" }

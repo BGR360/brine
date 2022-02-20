@@ -1124,8 +1124,10 @@ version = "0.0.0"
 dependencies = [
  "bevy",
  "brine_asset",
+ "brine_chunk",
  "brine_data",
  "brine_voxel",
+ "fastrand",
  "minecraft-assets",
 ]
 
