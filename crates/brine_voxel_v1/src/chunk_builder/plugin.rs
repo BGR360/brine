@@ -151,14 +151,16 @@ where
             let key = (block_state_id, face);
             let weak_handle = match handle_cache.entry(key) {
                 Entry::Vacant(entry) => {
-                    let strong_handle =
-                        match mc_assets.textures().get_texture_path(block_state_id, face) {
-                            Some(path) => asset_server.load(path),
-                            None => {
-                                debug!("No texture for {:?}:{:?}", block_state_id, face);
-                                texture_builder.placeholder_texture.clone()
-                            }
-                        };
+                    let strong_handle = match mc_assets
+                        .textures()
+                        .get_texture_path_for_block_state_and_face(block_state_id, face)
+                    {
+                        Some(path) => asset_server.load(path),
+                        None => {
+                            debug!("No texture for {:?}:{:?}", block_state_id, face);
+                            texture_builder.placeholder_texture.clone()
+                        }
+                    };
 
                     if !texture_handles.contains(&strong_handle) {
                         texture_handles.insert(strong_handle.clone());

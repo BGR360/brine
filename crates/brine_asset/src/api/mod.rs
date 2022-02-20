@@ -1,6 +1,9 @@
 //! API for accessing Minecraft asset data at runtime.
 
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use minecraft_assets::api::AssetPack;
 
@@ -60,6 +63,7 @@ impl MinecraftAssets {
 
 #[derive(Debug)]
 pub(crate) struct MinecraftAssetsInner {
+    pub(crate) root: PathBuf,
     pub(crate) block_state_table: BlockStateTable,
     pub(crate) cuboid_table: CuboidTable,
     pub(crate) model_table: ModelTable,
@@ -71,7 +75,7 @@ impl MinecraftAssetsInner {
     fn build(root: &Path, data: &MinecraftData) -> Result<Self> {
         let assets = AssetPack::at_path(root);
 
-        let texture_table = bakery::textures::load_texture_paths(root, &assets)?;
+        let texture_table = bakery::textures::load_texture_ids(&assets)?;
 
         let mc_models = {
             let unresolved_models = bakery::models::unresolved::load_block_models(&assets)?;
@@ -100,6 +104,7 @@ impl MinecraftAssetsInner {
         } = model_builder;
 
         let new = Self {
+            root: PathBuf::from(root),
             block_state_table,
             cuboid_table,
             model_table,

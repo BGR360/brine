@@ -1,34 +1,33 @@
-use std::path::PathBuf;
-
-use indexmap::IndexMap;
+use indexmap::IndexSet;
 use minecraft_assets::api::ResourceIdentifier;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Texture {
-    pub path: PathBuf,
-}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureKey(pub usize);
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TextureTable {
-    textures: IndexMap<ResourceIdentifier<'static>, Texture>,
+    textures: IndexSet<ResourceIdentifier<'static>>,
 }
 
 impl TextureTable {
     #[inline]
-    pub fn insert(&mut self, name: &ResourceIdentifier, texture: Texture) -> TextureKey {
-        let (index, _) = self.textures.insert_full(name.to_owned(), texture);
+    pub fn iter(&self) -> impl Iterator<Item = (TextureKey, &ResourceIdentifier<'static>)> {
+        self.textures
+            .iter()
+            .enumerate()
+            .map(|(index, id)| (TextureKey(index), id))
+    }
+
+    #[inline]
+    pub fn insert(&mut self, id: ResourceIdentifier<'static>) -> TextureKey {
+        let (index, _) = self.textures.insert_full(id);
 
         TextureKey(index)
     }
 
     #[inline]
-    pub fn get_by_key(&self, key: TextureKey) -> Option<&Texture> {
-        self.textures
-            .get_index(key.0)
-            .map(|(_name, texture)| texture)
+    pub fn get_by_key(&self, key: TextureKey) -> Option<&ResourceIdentifier<'_>> {
+        self.textures.get_index(key.0)
     }
 
     #[inline]

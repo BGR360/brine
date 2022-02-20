@@ -12,7 +12,7 @@ pub use block_state_table::{BlockState, BlockStateGrabBag, BlockStateModel, Bloc
 pub use cuboid_table::{Axis, Cuboid, CuboidKey, CuboidRotation, CuboidTable, DiscreteAngle};
 pub use model_table::{Model, ModelKey, ModelTable};
 pub use quad_table::{Quad, QuadKey, QuadTable};
-pub use texture_table::{Texture, TextureKey, TextureTable};
+pub use texture_table::{TextureKey, TextureTable};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]

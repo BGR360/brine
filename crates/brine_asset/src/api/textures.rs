@@ -1,21 +1,38 @@
 use std::path::PathBuf;
 
-use minecraft_assets::schemas::models::BlockFace;
+use minecraft_assets::{api::ResourcePath, schemas::models::BlockFace};
 
 use brine_data::blocks::BlockStateId;
 use tracing::{debug, trace, warn};
 
-use crate::{api::MinecraftAssetsInner, storage::Quad};
+use crate::{
+    api::MinecraftAssetsInner,
+    storage::{Quad, TextureKey, TextureTable},
+};
 
 pub struct Textures<'a> {
     parent: &'a MinecraftAssetsInner,
 }
+
 impl<'a> Textures<'a> {
     pub(crate) fn new(parent: &'a MinecraftAssetsInner) -> Self {
         Self { parent }
     }
 
-    pub fn get_texture_path(
+    pub fn get_texture_path(&self, texture_key: TextureKey) -> Option<PathBuf> {
+        let texture_id = self.parent.texture_table.get_by_key(texture_key)?;
+
+        let texture_path = ResourcePath::for_resource(&self.parent.root, texture_id);
+
+        Some(texture_path.strip_prefix("assets").unwrap().into())
+    }
+
+    pub fn table(&self) -> &'a TextureTable {
+        &self.parent.texture_table
+    }
+
+    // TODO: deprecate
+    pub fn get_texture_path_for_block_state_and_face(
         &self,
         block_state_id: BlockStateId,
         face: BlockFace,
@@ -96,10 +113,10 @@ impl<'a> Textures<'a> {
 
         let texture_key = quad.texture;
 
-        let texture = self.parent.texture_table.get_by_key(texture_key).unwrap();
+        let texture_path = self.get_texture_path(texture_key)?;
 
-        trace!("{:#?}", texture);
+        trace!("{}", texture_path.to_string_lossy());
 
-        Some(texture.path.strip_prefix("assets").unwrap().into())
+        Some(texture_path)
     }
 }
