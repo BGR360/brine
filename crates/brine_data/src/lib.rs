@@ -7,6 +7,6 @@ pub mod blocks;
 mod data;
 mod version;
 
-pub use blocks::Blocks;
+pub use blocks::{BlockId, BlockState, BlockStateId, Blocks};
 pub use data::MinecraftData;
 pub use version::Version;

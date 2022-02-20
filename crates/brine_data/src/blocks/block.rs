@@ -116,6 +116,12 @@ impl Blocks {
         Some(self.get_by_index_and_state_id(*block_index, Some(block_state_id)))
     }
 
+    #[inline]
+    pub fn is_air(&self, block_state_id: BlockStateId) -> Option<bool> {
+        let block_name = self.get_by_state_id(block_state_id)?.name;
+        Some(block_name == "air" || block_name == "cave_air")
+    }
+
     pub(crate) fn get_by_index_and_state_id(
         &self,
         index: IndexType,
