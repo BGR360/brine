@@ -1,7 +1,5 @@
 //! Data structures for quick runtime access to asset data.
 
-use std::fmt;
-
 mod block_state_table;
 mod cuboid_table;
 mod model_table;

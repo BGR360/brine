@@ -1058,6 +1058,7 @@ dependencies = [
  "rayon",
  "smallvec",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

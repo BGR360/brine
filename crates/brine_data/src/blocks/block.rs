@@ -75,20 +75,6 @@ impl Blocks {
         self.blocks.len()
     }
 
-    #[inline]
-    pub fn iter_blocks(&self) -> impl Iterator<Item = Block<'_>> + '_ {
-        self.blocks
-            .iter()
-            .map(|mc_block| Self::block_from_mc_block(mc_block, None))
-    }
-
-    #[inline]
-    pub fn iter_states(&self) -> impl Iterator<Item = Block<'_>> + '_ {
-        let max_state_id = self.blocks.last().unwrap().max_state_id.unwrap() as u16;
-
-        (0..max_state_id).map(|state_id| self.get_by_state_id(BlockStateId(state_id)).unwrap())
-    }
-
     /// Returns the [`Block`] with the given block id in its default state, or
     /// `None` if no such block exists.
     #[inline]
@@ -120,6 +106,38 @@ impl Blocks {
     pub fn is_air(&self, block_state_id: BlockStateId) -> Option<bool> {
         let block_name = self.get_by_state_id(block_state_id)?.name;
         Some(block_name == "air" || block_name == "cave_air")
+    }
+
+    #[inline]
+    pub fn iter_blocks(&self) -> impl Iterator<Item = Block<'_>> + '_ {
+        self.blocks
+            .iter()
+            .map(|mc_block| Self::block_from_mc_block(mc_block, None))
+    }
+
+    #[inline]
+    pub fn iter_states(&self) -> impl Iterator<Item = Block<'_>> + '_ {
+        let max_state_id = self.blocks.last().unwrap().max_state_id.unwrap() as u16;
+
+        (0..max_state_id).map(|state_id| self.get_by_state_id(BlockStateId(state_id)).unwrap())
+    }
+
+    #[inline]
+    pub fn iter_states_for_block(
+        &self,
+        block_id: BlockId,
+    ) -> Option<impl Iterator<Item = (BlockStateId, Block<'_>)> + '_> {
+        let index = *self.state_id_to_block.get(block_id.0 as usize)?;
+        let mc_block = &self.blocks[index as usize];
+
+        let min_state = mc_block.min_state_id.unwrap();
+        let max_state = mc_block.max_state_id.unwrap();
+
+        Some((min_state..max_state).map(|state_id| {
+            let block_state_id = BlockStateId(state_id as IndexType);
+            let block = self.get_by_state_id(block_state_id).unwrap();
+            (block_state_id, block)
+        }))
     }
 
     pub(crate) fn get_by_index_and_state_id(

@@ -3,7 +3,7 @@ use minecraft_assets::{
     schemas::models::{BlockFace, Textures},
 };
 use smallvec::SmallVec;
-use tracing::warn;
+use tracing::*;
 
 use crate::{
     bakery_v2::models::{
@@ -26,9 +26,14 @@ impl<'a> ModelBakery<'a> {
         }
     }
 
-    pub fn bake_model(&self, model: &'a UnbakedModel) -> BakedModel {
+    pub fn bake_model(&self, model_name: &str) -> Option<BakedModel> {
+        debug!("Baking model: {}", model_name);
+
         let mut baked_quads = SmallVec::new();
 
+        let model = self
+            .unbaked_models
+            .get(&ResourceIdentifier::block_model(model_name))?;
         let parent_chain = self.get_parent_chain(model);
 
         let resolved_textures = ModelResolver::resolve_textures(parent_chain.iter().copied());
@@ -41,7 +46,7 @@ impl<'a> ModelBakery<'a> {
             }
         }
 
-        BakedModel { quads: baked_quads }
+        Some(BakedModel { quads: baked_quads })
     }
 
     pub fn bake_cuboid(
@@ -51,6 +56,7 @@ impl<'a> ModelBakery<'a> {
     ) -> SmallVec<[BakedQuad; 6]> {
         let rotation = CuboidRotation::from(cuboid.rotation.clone());
         let rotated_cuboid = rotation.rotate_cuboid(Cuboid::new(cuboid.from, cuboid.to));
+        let rotated_and_scaled_cuboid = rotated_cuboid.scaled(1.0 / 16.0);
 
         let shade_faces = cuboid.shade;
 
@@ -68,7 +74,7 @@ impl<'a> ModelBakery<'a> {
             self.bake_quad(
                 unbaked_quad,
                 &rotation,
-                &rotated_cuboid,
+                &rotated_and_scaled_cuboid,
                 face,
                 resolved_textures,
                 shade_faces,
@@ -128,7 +134,7 @@ impl<'a> ModelBakery<'a> {
         */
         let [u0, v0, u1, v1] = quad.uv.unwrap_or([0.0, 0.0, 16.0, 16.0]);
 
-        match quad.rotation {
+        let uvs = match quad.rotation {
             /*
             (u0, v0)
                      \
@@ -165,7 +171,9 @@ impl<'a> ModelBakery<'a> {
                 warn!("Invalid face rotation: {}", x);
                 None
             }
-        }
+        };
+
+        uvs.map(|uvs| uvs.map(|x| x / 16.0))
     }
 
     pub fn get_parent_chain(&self, mut child: &'a UnbakedModel) -> SmallVec<[&'a UnbakedModel; 4]> {
@@ -173,7 +181,11 @@ impl<'a> ModelBakery<'a> {
         chain.push(child);
 
         while let Some(parent) = child.parent.as_ref() {
-            child = self.unbaked_models.get(parent).unwrap();
+            trace!("Parent: {}", parent);
+            child = self
+                .unbaked_models
+                .get(&ResourceIdentifier::block_model(parent))
+                .unwrap();
             chain.push(child);
         }
 

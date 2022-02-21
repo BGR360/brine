@@ -80,6 +80,13 @@ impl Cuboid {
             BlockFace::East => const_vec3a!([1.0, 0.0, 0.0]),
         }
     }
+
+    #[inline(always)]
+    pub fn scaled(self, scale_factor: f32) -> Self {
+        let vertices = self.vertices.map(|vertex| vertex * scale_factor);
+
+        Self { vertices }
+    }
 }
 
 /*
