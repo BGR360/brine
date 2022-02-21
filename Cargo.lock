@@ -1137,7 +1137,7 @@ version = "0.0.0"
 dependencies = [
  "bevy",
  "fastrand",
- "glam 0.19.0",
+ "glam 0.20.2",
  "num-traits",
 ]
 
