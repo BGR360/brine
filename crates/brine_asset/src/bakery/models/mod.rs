@@ -9,7 +9,7 @@ use minecraft_assets::{
 use tracing::{debug, warn};
 
 use crate::{
-    bakery_v2::{CuboidRotation, QuarterRotation},
+    bakery_v2::models::{CuboidRotation, QuarterRotation},
     storage::{
         Cuboid, CuboidKey, CuboidTable, Model, ModelKey, ModelTable, Quad, QuadKey, QuadTable,
         TextureTable,

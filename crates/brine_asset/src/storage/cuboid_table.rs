@@ -1,6 +1,6 @@
 pub use minecraft_assets::schemas::models::Axis;
 
-use crate::{bakery_v2::CuboidRotation, storage::QuadKey};
+use crate::{bakery_v2::models::CuboidRotation, storage::QuadKey};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Cuboid {
