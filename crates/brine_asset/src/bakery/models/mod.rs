@@ -8,9 +8,12 @@ use minecraft_assets::{
 };
 use tracing::{debug, warn};
 
-use crate::storage::{
-    Cuboid, CuboidKey, CuboidRotation, CuboidTable, Model, ModelKey, ModelTable, Quad, QuadKey,
-    QuadTable, QuarterRotation, TextureTable,
+use crate::{
+    bakery_v2::{CuboidRotation, QuarterRotation},
+    storage::{
+        Cuboid, CuboidKey, CuboidTable, Model, ModelKey, ModelTable, Quad, QuadKey, QuadTable,
+        TextureTable,
+    },
 };
 
 pub(crate) mod resolved;

@@ -1,9 +1,6 @@
 use smallvec::SmallVec;
 
-use crate::{
-    api::BlockStateId,
-    storage::{ModelKey, QuarterRotation},
-};
+use crate::{api::BlockStateId, bakery_v2::QuarterRotation, storage::ModelKey};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BlockState {
