@@ -15,12 +15,12 @@ pub struct BlockStateGrabBag {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct BlockStateTable {
+pub struct BakedBlockStateTable {
     /// Indexed by [`BlockStateId`].
     pub block_states: Vec<BakedBlockState>,
 }
 
-impl BlockStateTable {
+impl BakedBlockStateTable {
     pub fn insert(&mut self, block_state: BakedBlockState) -> BlockStateId {
         let index = self.block_states.len();
 

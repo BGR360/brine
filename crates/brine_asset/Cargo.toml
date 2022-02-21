@@ -12,3 +12,6 @@ tracing = "0.1"
 
 brine_data = { path = "../brine_data" }
 minecraft-assets = { path = "../minecraft-assets-rs" }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

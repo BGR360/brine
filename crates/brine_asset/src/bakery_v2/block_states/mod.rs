@@ -1,8 +1,9 @@
 mod baked;
 mod block_states_bakery;
+mod half_baked;
 mod unbaked;
 
-pub use baked::{BakedBlockState, BlockStateGrabBag, BlockStateTable};
+pub use baked::{BakedBlockState, BakedBlockStateTable, BlockStateGrabBag};
 pub use block_states_bakery::BlockStatesBakery;
-
-pub(crate) use unbaked::{load_unbaked_block_states, UnbakedBlockStates, UnbakedBlockStatesTable};
+pub use half_baked::{HalfBakedBlockState, HalfBakedGrabBagChoice};
+pub use unbaked::{load_unbaked_block_states, UnbakedBlockStatesTable};

@@ -42,19 +42,19 @@ pub struct BakedModelKey(pub usize);
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct BakedModelTable {
-    baked_models: Vec<BakedModel>,
+    pub models: Vec<BakedModel>,
 }
 
 impl BakedModelTable {
     pub fn insert(&mut self, baked_model: BakedModel) -> BakedModelKey {
-        let index = self.baked_models.len();
+        let index = self.models.len();
 
-        self.baked_models.push(baked_model);
+        self.models.push(baked_model);
 
         BakedModelKey(index)
     }
 
     pub fn get_by_key(&self, key: BakedModelKey) -> Option<&BakedModel> {
-        self.baked_models.get(key.0)
+        self.models.get(key.0)
     }
 }
