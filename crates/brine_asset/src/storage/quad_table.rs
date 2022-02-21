@@ -1,4 +1,4 @@
-use crate::{bakery_v2::QuarterRotation, storage::TextureKey, BlockFace};
+use crate::{bakery_v2::models::QuarterRotation, storage::TextureKey, BlockFace};
 
 /// A single quad (face) of a cuboid model element.
 #[derive(Debug, Clone, Copy, PartialEq)]

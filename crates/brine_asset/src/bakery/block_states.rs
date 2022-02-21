@@ -15,7 +15,7 @@ use brine_data::{
 
 use crate::{
     api::{BlockStateId, Result},
-    bakery_v2::QuarterRotation,
+    bakery_v2::models::QuarterRotation,
     storage::{BlockState, BlockStateGrabBag, BlockStateModel, BlockStateTable},
 };
 

@@ -6,7 +6,7 @@ use smallvec::SmallVec;
 use tracing::warn;
 
 use crate::{
-    bakery_v2::{
+    bakery_v2::models::{
         BakedModel, BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedModel, UnbakedModels,
         UnbakedQuad,
     },
