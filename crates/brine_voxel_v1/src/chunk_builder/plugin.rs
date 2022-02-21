@@ -152,7 +152,6 @@ where
             let weak_handle = match handle_cache.entry(key) {
                 Entry::Vacant(entry) => {
                     let strong_handle = match mc_assets
-                        .textures()
                         .get_texture_path_for_block_state_and_face(block_state_id, face)
                     {
                         Some(path) => asset_server.load(path),

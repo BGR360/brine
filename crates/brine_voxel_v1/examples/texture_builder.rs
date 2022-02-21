@@ -43,9 +43,7 @@ fn load_atlas(
     let block_states = (1..500).map(BlockStateId);
 
     let atlas_handle = block_textures.create_texture_atlas(block_states, &asset_server, |b| {
-        mc_assets
-            .textures()
-            .get_texture_path_for_block_state_and_face(b, BlockFace::South)
+        mc_assets.get_texture_path_for_block_state_and_face(b, BlockFace::South)
     });
 
     atlas.handle = Some(atlas_handle);

@@ -35,7 +35,6 @@ fn get_all_textures<'a>(
 ) -> impl Iterator<Item = (TextureKey, Handle<Image>)> + 'a {
     mc_assets
         .textures()
-        .table()
         .iter()
         .filter_map(|(texture_key, texture_id)| {
             trace!("{texture_key:?}: {texture_id:?}");
@@ -47,7 +46,7 @@ fn get_all_textures<'a>(
                 || texture_id.path().starts_with("painting/")
                 || texture_id.path().starts_with("particle/")
             {
-                let path = mc_assets.textures().get_texture_path(texture_key).unwrap();
+                let path = mc_assets.get_texture_path(texture_key).unwrap();
                 let handle = asset_server.load(path);
                 Some((texture_key, handle))
             } else {
