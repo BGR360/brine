@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     log::{Level, LogSettings},
     prelude::*,
 };
@@ -80,7 +81,10 @@ fn main() {
     // Debugging, diagnostics, and utility plugins.
 
     if args.debug {
-        app.add_plugin(WorldInspectorPlugin::new());
+        app.add_plugin(WorldInspectorPlugin::new())
+            .add_plugin(DebugWireframePlugin)
+            .add_plugin(FrameTimeDiagnosticsPlugin)
+            .add_plugin(LogDiagnosticsPlugin::default());
     }
 
     app.run();
@@ -92,7 +96,6 @@ pub struct MinecraftWorldViewerPlugin;
 impl Plugin for MinecraftWorldViewerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Msaa { samples: 4 })
-            .add_plugin(DebugWireframePlugin)
             .add_plugin(FlyCameraPlugin)
             .add_plugin(ChunkBuilderPlugin::<VisibleFacesChunkBuilder>::default())
             // .add_plugin(ChunkBuilderPlugin::<GreedyQuadsChunkBuilder>::default())
