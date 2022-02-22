@@ -57,7 +57,7 @@ fn print_a_few(mc_data: &MinecraftData, asset_pack: &AssetPack) {
 }
 
 fn print_baked_block(model_bakery: &ModelBakery, block_name: &str) {
-    let baked = model_bakery.bake_model(block_name).unwrap();
+    let baked = model_bakery.bake_model(block_name, false).unwrap();
 
     info!("{:#?}", baked);
 }

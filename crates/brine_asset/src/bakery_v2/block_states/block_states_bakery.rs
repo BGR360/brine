@@ -136,7 +136,7 @@ impl<'a> BlockStatesBakery<'a> {
             .models()
             .iter()
             .filter_map(|model_properties| {
-                let baked_model = model_cache.get_or_bake_model(&model_properties.model)?;
+                let baked_model = model_cache.get_or_bake_model(model_properties)?;
                 let weight = model_properties.weight;
 
                 Some(HalfBakedGrabBagChoice {

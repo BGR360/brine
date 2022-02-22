@@ -102,14 +102,14 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
 
     debug!("Finished fully baking block states");
 
-    trace!(
-        "Fully baked: {:#?}",
-        baked_block_states
-            .iter()
-            .enumerate()
-            .filter(|(_index, baked_block_state)| !baked_block_state.models.is_empty())
-            .collect::<Vec<_>>()
-    );
+    // trace!(
+    //     "Fully baked: {:#?}",
+    //     baked_block_states
+    //         .iter()
+    //         .enumerate()
+    //         .filter(|(_index, baked_block_state)| !baked_block_state.models.is_empty())
+    //         .collect::<Vec<_>>()
+    // );
 
     Ok(BakedAssets {
         block_states: BakedBlockStateTable {
