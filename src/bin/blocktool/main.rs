@@ -1,4 +1,5 @@
 mod print;
+mod view;
 
 use clap::Parser;
 
@@ -13,6 +14,7 @@ struct Args {
 #[derive(clap::Subcommand)]
 enum Subcommand {
     Print(print::Args),
+    View(view::Args),
 }
 
 fn main() {
@@ -20,5 +22,6 @@ fn main() {
 
     match args.command {
         Subcommand::Print(args) => print::main(args),
+        Subcommand::View(args) => view::main(args),
     }
 }
