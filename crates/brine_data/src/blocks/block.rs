@@ -133,7 +133,7 @@ impl Blocks {
         let min_state = mc_block.min_state_id.unwrap();
         let max_state = mc_block.max_state_id.unwrap();
 
-        Some((min_state..max_state).map(|state_id| {
+        Some((min_state..max_state + 1).map(|state_id| {
             let block_state_id = BlockStateId(state_id as IndexType);
             let block = self.get_by_state_id(block_state_id).unwrap();
             (block_state_id, block)
