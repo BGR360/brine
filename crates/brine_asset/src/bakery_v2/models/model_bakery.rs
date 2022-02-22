@@ -1,14 +1,17 @@
 use minecraft_assets::{
     api::{ModelResolver, ResourceIdentifier},
-    schemas::models::{BlockFace, Textures},
+    schemas::{
+        blockstates::ModelProperties,
+        models::{BlockFace, Textures},
+    },
 };
 use smallvec::SmallVec;
 use tracing::*;
 
 use crate::{
     bakery_v2::models::{
-        BakedModel, BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedModel, UnbakedModels,
-        UnbakedQuad,
+        cuboid_math::QuadRotation, BakedModel, BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid,
+        UnbakedModel, UnbakedModels, UnbakedQuad,
     },
     storage::TextureTable,
 };
@@ -26,7 +29,22 @@ impl<'a> ModelBakery<'a> {
         }
     }
 
-    pub fn bake_model(&self, model_name: &str) -> Option<BakedModel> {
+    pub fn bake_model_from_properties(
+        &self,
+        model_properties: &ModelProperties,
+    ) -> Option<BakedModel> {
+        let mut baked_model = self.bake_model(&model_properties.model, model_properties.uv_lock)?;
+
+        let rotation = QuadRotation::new(model_properties.x, model_properties.y);
+
+        for quad in baked_model.quads.iter_mut() {
+            rotation.rotate_quad(quad);
+        }
+
+        Some(baked_model)
+    }
+
+    pub fn bake_model(&self, model_name: &str, uv_lock: bool) -> Option<BakedModel> {
         debug!("Baking model: {}", model_name);
 
         let mut baked_quads = SmallVec::new();
@@ -41,7 +59,7 @@ impl<'a> ModelBakery<'a> {
         if let Some(cuboid_elements) = ModelResolver::resolve_elements(parent_chain.iter().copied())
         {
             for cuboid in cuboid_elements {
-                let mut cuboid_quads = self.bake_cuboid(&cuboid, &resolved_textures);
+                let mut cuboid_quads = self.bake_cuboid(&cuboid, &resolved_textures, uv_lock);
                 baked_quads.append(&mut cuboid_quads);
             }
         }
@@ -53,6 +71,7 @@ impl<'a> ModelBakery<'a> {
         &self,
         cuboid: &'a UnbakedCuboid,
         resolved_textures: &Textures,
+        uv_lock: bool,
     ) -> SmallVec<[BakedQuad; 6]> {
         let rotation = CuboidRotation::from(cuboid.rotation.clone());
         let rotated_cuboid = rotation.rotate_cuboid(Cuboid::new(cuboid.from, cuboid.to));
@@ -78,11 +97,13 @@ impl<'a> ModelBakery<'a> {
                 face,
                 resolved_textures,
                 shade_faces,
+                uv_lock,
             )
         })
         .collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn bake_quad(
         &self,
@@ -92,10 +113,11 @@ impl<'a> ModelBakery<'a> {
         face: BlockFace,
         resolved_textures: &Textures,
         shade: bool,
+        uv_lock: bool,
     ) -> Option<BakedQuad> {
         let positions = rotated_cuboid.get_face(face).map(|vec3a| vec3a.into());
         let normal = rotation.rotate_vector(Cuboid::get_normal(face)).into();
-        let tex_coords = Self::get_quad_tex_coords(quad)?;
+        let tex_coords = Self::get_quad_tex_coords(quad, uv_lock)?;
 
         let resolved_texture = quad.texture.resolve(resolved_textures).or_else(|| {
             warn!(
@@ -125,7 +147,7 @@ impl<'a> ModelBakery<'a> {
     }
 
     #[inline(always)]
-    pub fn get_quad_tex_coords(quad: &UnbakedQuad) -> Option<[f32; 4]> {
+    pub fn get_quad_tex_coords(quad: &UnbakedQuad, uv_lock: bool) -> Option<[f32; 4]> {
         /*
             (u0, v0)    (u1, v0)
 
@@ -134,14 +156,14 @@ impl<'a> ModelBakery<'a> {
         */
         let [u0, v0, u1, v1] = quad.uv.unwrap_or([0.0, 0.0, 16.0, 16.0]);
 
-        let uvs = match quad.rotation {
+        let uvs = match (uv_lock, quad.rotation) {
             /*
             (u0, v0)
                      \
                       \>
                         (u1, v1)
             */
-            0 => Some([u0, v0, u1, v1]),
+            (true, _) | (false, 0) => Some([u0, v0, u1, v1]),
 
             /*
                         (u1, v0)
@@ -149,7 +171,7 @@ impl<'a> ModelBakery<'a> {
                     </
             (u0, v1)
             */
-            90 => Some([u1, v0, u0, v1]),
+            (false, 90) => Some([u1, v0, u0, v1]),
 
             /*
             (u0, v0)
@@ -157,7 +179,7 @@ impl<'a> ModelBakery<'a> {
                       \
                         (u1, v1)
             */
-            180 => Some([u1, v1, u0, v0]),
+            (false, 180) => Some([u1, v1, u0, v0]),
 
             /*
                         (u1, v0)
@@ -165,9 +187,9 @@ impl<'a> ModelBakery<'a> {
                      /
             (u0, v1)
             */
-            270 => Some([u0, v1, u1, v0]),
+            (false, 270) => Some([u0, v1, u1, v0]),
 
-            x => {
+            (false, x) => {
                 warn!("Invalid face rotation: {}", x);
                 None
             }

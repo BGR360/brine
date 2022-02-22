@@ -3,6 +3,8 @@ use std::fmt;
 use glam::{const_vec3a, Affine3A, Vec3A};
 use minecraft_assets::schemas::models::{Axis, BlockFace, ElementRotation};
 
+use crate::bakery_v2::models::BakedQuad;
+
 /*
    .aMMMb  dMP dMP dMMMMb  .aMMMb  dMP dMMMMb
   dMP"VMP dMP dMP dMP"dMP dMP"dMP amr dMP VMP
@@ -42,8 +44,8 @@ impl Cuboid {
                 Vec3A::new(min.x, min.y, max.z),
                 Vec3A::new(min.x, max.y, min.z),
                 Vec3A::new(min.x, max.y, max.z),
-                Vec3A::new(max.x, max.y, min.z),
                 Vec3A::new(max.x, max.y, max.z),
+                Vec3A::new(max.x, max.y, min.z),
             ],
         }
     }
@@ -57,7 +59,7 @@ impl Cuboid {
             BlockFace::Up => [4, 5, 6, 7],
             BlockFace::North => [4, 7, 1, 0],
             BlockFace::South => [3, 2, 6, 5],
-            BlockFace::West => [0, 3, 5, 4],
+            BlockFace::West => [4, 0, 3, 5],
             BlockFace::East => [6, 2, 1, 7],
         };
 
@@ -177,6 +179,74 @@ impl From<ElementRotation> for CuboidRotation {
 }
 
 /*
+   .aMMMb  dMP dMP .aMMMb  dMMMMb
+  dMP"dMP dMP dMP dMP"dMP dMP VMP
+ dMP.dMP dMP dMP dMMMMMP dMP dMP
+dMP.MMP dMP.aMP dMP dMP dMP.aMP
+VMMP"MP VMMMP" dMP dMP dMMMMP"
+
+    dMMMMb  .aMMMb dMMMMMMP .aMMMb dMMMMMMP dMP .aMMMb  dMMMMb
+   dMP.dMP dMP"dMP   dMP   dMP"dMP   dMP   amr dMP"dMP dMP dMP
+  dMMMMK" dMP dMP   dMP   dMMMMMP   dMP   dMP dMP dMP dMP dMP
+ dMP"AMF dMP.aMP   dMP   dMP dMP   dMP   dMP dMP.aMP dMP dMP
+dMP dMP  VMMMP"   dMP   dMP dMP   dMP   dMP  VMMMP" dMP dMP
+
+
+FIGLET: QuadRotation
+*/
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct QuadRotation {
+    pub x: QuarterRotation,
+    pub y: QuarterRotation,
+}
+
+impl QuadRotation {
+    #[inline(always)]
+    pub fn new<T: Into<QuarterRotation>>(x: T, y: T) -> Self {
+        Self {
+            x: x.into(),
+            y: y.into(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn rotate_quad(&self, quad: &mut BakedQuad) {
+        let rotated_vertices = quad.positions.map(|p| self.rotate_point(p));
+
+        quad.positions = rotated_vertices;
+    }
+
+    #[inline(always)]
+    pub fn rotate_point(&self, [x, y, z]: [f32; 3]) -> [f32; 3] {
+        let [x, y, z] = Self::rotate_x([x, y, z], self.x);
+        let [x, y, z] = Self::rotate_y([x, y, z], self.y);
+
+        [x, y, z]
+    }
+
+    #[inline(always)]
+    fn rotate_x([x, y, z]: [f32; 3], rotation: QuarterRotation) -> [f32; 3] {
+        match rotation {
+            QuarterRotation::Deg0 => [x, y, z],
+            QuarterRotation::Deg90 => [x, -z, y],
+            QuarterRotation::Deg180 => [x, -y, -z],
+            QuarterRotation::Deg270 => [x, z, -y],
+        }
+    }
+
+    #[inline(always)]
+    fn rotate_y([x, y, z]: [f32; 3], rotation: QuarterRotation) -> [f32; 3] {
+        match rotation {
+            QuarterRotation::Deg0 => [x, y, z],
+            QuarterRotation::Deg90 => [z, y, -x],
+            QuarterRotation::Deg180 => [-x, y, -z],
+            QuarterRotation::Deg270 => [-z, y, x],
+        }
+    }
+}
+
+/*
    .aMMMb  dMP dMP .aMMMb  dMMMMb dMMMMMMP dMMMMMP dMMMMb
   dMP"dMP dMP dMP dMP"dMP dMP.dMP   dMP   dMP     dMP.dMP
  dMP.dMP dMP dMP dMMMMMP dMMMMK"   dMP   dMMMP   dMMMMK"
@@ -216,6 +286,32 @@ impl From<u32> for QuarterRotation {
             180 => Self::Deg180,
             270 => Self::Deg270,
             _ => panic!("Invalid quad rotation: {}", deg),
+        }
+    }
+}
+
+impl From<i32> for QuarterRotation {
+    fn from(deg: i32) -> Self {
+        match deg {
+            -270 => Self::Deg90,
+            -180 => Self::Deg180,
+            -90 => Self::Deg270,
+            0 => Self::Deg0,
+            90 => Self::Deg90,
+            180 => Self::Deg180,
+            270 => Self::Deg270,
+            _ => panic!("Invalid quad rotation: {}", deg),
+        }
+    }
+}
+
+impl From<QuarterRotation> for f32 {
+    fn from(rot: QuarterRotation) -> Self {
+        match rot {
+            QuarterRotation::Deg0 => 0.0,
+            QuarterRotation::Deg90 => 90.0,
+            QuarterRotation::Deg180 => 180.0,
+            QuarterRotation::Deg270 => 270.0,
         }
     }
 }
@@ -294,5 +390,67 @@ impl Default for EighthRotation {
 impl fmt::Debug for EighthRotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", f32::from(*self))
+    }
+}
+
+/*
+ dMMMMMMP dMMMMMP .dMMMb dMMMMMMP .dMMMb
+   dMP   dMP     dMP" VP   dMP   dMP" VP
+  dMP   dMMMP    VMMMb    dMP    VMMMb
+ dMP   dMP     dP .dMP   dMP   dP .dMP
+dMP   dMMMMMP  VMMMP"   dMP    VMMMP"
+
+
+FIGLET: Tests
+*/
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use glam::Quat;
+
+    fn quad_rotation_to_quat(rotation: QuadRotation) -> Quat {
+        let x = f32::from(rotation.x).to_radians();
+        let y = f32::from(rotation.y).to_radians();
+        let rot_x = Quat::from_rotation_x(x);
+        let rot_y = Quat::from_rotation_y(y);
+
+        rot_y.mul_quat(rot_x)
+    }
+
+    fn assert_rotation_is_correct(point: [f32; 3], rotation: QuadRotation) {
+        let rotated_point = rotation.rotate_point(point);
+
+        let expected = quad_rotation_to_quat(rotation).mul_vec3a(Vec3A::from(point));
+        let actual = Vec3A::from(rotated_point);
+
+        assert!(
+            (actual - expected).distance(Vec3A::ZERO) <= 0.0001,
+            "point: {:?}, rotation: {:?}, actual: {:?}, expected: {:?}",
+            point,
+            rotation,
+            actual,
+            expected
+        );
+    }
+
+    fn do_quad_rotation_test(point: [f32; 3]) {
+        for x in [0, 90, 180, 270] {
+            for y in [0, 90, 180, 270] {
+                assert_rotation_is_correct(point, QuadRotation::new(x, y));
+            }
+        }
+    }
+
+    #[test]
+    fn quad_rotation() {
+        for x in [-1.0, -0.5, 0.0, 0.5, 1.0] {
+            for y in [-1.0, -0.5, 0.0, 0.5, 1.0] {
+                for z in [-1.0, -0.5, 0.0, 0.5, 1.0] {
+                    do_quad_rotation_test([x, y, z]);
+                }
+            }
+        }
     }
 }

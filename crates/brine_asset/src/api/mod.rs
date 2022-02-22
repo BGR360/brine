@@ -19,6 +19,7 @@ pub use brine_data::{
 
 use crate::{
     bakery::{self, block_states::BlockStateBuilder, models::ModelBuilder},
+    bakery_v2::{self, BakedAssets},
     storage::{
         BlockStateTable, CuboidTable, ModelTable, Quad, QuadTable, TextureKey, TextureTable,
     },
@@ -71,6 +72,11 @@ impl MinecraftAssets {
     #[inline]
     pub fn textures(&self) -> &TextureTable {
         &self.inner.texture_table
+    }
+
+    #[inline]
+    pub fn baked_assets(&self) -> &BakedAssets {
+        &self.inner.baked_assets
     }
 
     #[inline]
@@ -172,6 +178,7 @@ pub(crate) struct MinecraftAssetsInner {
     pub(crate) model_table: ModelTable,
     pub(crate) quad_table: QuadTable,
     pub(crate) texture_table: TextureTable,
+    pub(crate) baked_assets: BakedAssets,
 }
 
 impl MinecraftAssetsInner {
@@ -206,6 +213,8 @@ impl MinecraftAssetsInner {
             ..
         } = model_builder;
 
+        let baked_assets = bakery_v2::bake_all(data, &assets)?;
+
         let new = Self {
             root: PathBuf::from(root),
             block_state_table,
@@ -213,6 +222,7 @@ impl MinecraftAssetsInner {
             model_table,
             quad_table,
             texture_table,
+            baked_assets,
         };
 
         Ok(new)
