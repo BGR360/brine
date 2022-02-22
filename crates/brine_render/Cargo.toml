@@ -12,5 +12,6 @@ brine_data = { path = "../brine_data" }
 brine_voxel = { path = "../brine_voxel" }
 
 [dev-dependencies]
+bevy-inspector-egui = "0.7"
 fastrand = "1"
 minecraft-assets = { path = "../minecraft-assets-rs" }
