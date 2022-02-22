@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use bevy::{asset::AssetServerSettings, prelude::*};
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 use brine_asset::MinecraftAssets;
 use brine_data::MinecraftData;
@@ -14,7 +15,11 @@ fn main() {
     let mc_assets = MinecraftAssets::new("assets/1.14.4", &mc_data).unwrap();
 
     App::new()
+        .insert_resource(AssetServerSettings {
+            asset_folder: String::from("../../assets"),
+        })
         .add_plugins(DefaultPlugins)
+        .add_plugin(WorldInspectorPlugin::new())
         .insert_resource(mc_assets)
         .add_plugin(TextureManagerPlugin)
         .add_plugin(MinecraftTexturesPlugin)

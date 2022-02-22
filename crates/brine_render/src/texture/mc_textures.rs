@@ -40,11 +40,11 @@ fn get_all_textures<'a>(
             trace!("{texture_key:?}: {texture_id:?}");
 
             if texture_id.path().starts_with("block/")
-                || texture_id.path().starts_with("effect/")
-                || texture_id.path().starts_with("item/")
-                || texture_id.path().starts_with("mob_effect/")
+                // || texture_id.path().starts_with("effect/")
+                // || texture_id.path().starts_with("item/")
+                // || texture_id.path().starts_with("mob_effect/")
                 || texture_id.path().starts_with("painting/")
-                || texture_id.path().starts_with("particle/")
+            // || texture_id.path().starts_with("particle/")
             {
                 let path = mc_assets.get_texture_path(texture_key).unwrap();
                 let handle = asset_server.load(path);
