@@ -1,6 +1,7 @@
 mod baked;
 mod block_states_bakery;
 mod half_baked;
+pub(crate) mod model_cache;
 mod unbaked;
 
 pub use baked::{BakedBlockState, BakedBlockStateTable, BlockStateGrabBag};
