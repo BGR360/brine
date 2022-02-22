@@ -9,7 +9,7 @@ use super::{state::McBlockExt, BlockState};
 
 pub(crate) type IndexType = u16;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockId(pub IndexType);
 
 impl<T> From<T> for BlockId
@@ -22,7 +22,7 @@ where
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockStateId(pub IndexType);
 
 impl<T> From<T> for BlockStateId
@@ -80,7 +80,8 @@ impl Blocks {
     #[inline]
     pub fn get_by_id(&self, block_id: BlockId) -> Option<Block<'_>> {
         // A block's id should always equal its minimum state id.
-        self.get_by_state_id(BlockStateId(block_id.0))
+        // self.get_by_state_id(BlockStateId(block_id.0))
+        self.get_by_index_and_state_id(block_id.0, None)
     }
 
     /// Returns the [`Block`] with the given name in its default state, or
@@ -89,7 +90,7 @@ impl Blocks {
     pub fn get_by_name(&self, name: &str) -> Option<Block<'_>> {
         let index = self.name_to_block.get(name)?;
 
-        Some(self.get_by_index_and_state_id(*index, None))
+        self.get_by_index_and_state_id(*index, None)
     }
 
     /// Returns the [`Block`] associated with the given block state id, or
@@ -99,7 +100,7 @@ impl Blocks {
         let state_id = block_state_id.0;
         let block_index = self.state_id_to_block.get(state_id as usize)?;
 
-        Some(self.get_by_index_and_state_id(*block_index, Some(block_state_id)))
+        self.get_by_index_and_state_id(*block_index, Some(block_state_id))
     }
 
     #[inline]
@@ -127,8 +128,7 @@ impl Blocks {
         &self,
         block_id: BlockId,
     ) -> Option<impl Iterator<Item = (BlockStateId, Block<'_>)> + '_> {
-        let index = *self.state_id_to_block.get(block_id.0 as usize)?;
-        let mc_block = &self.blocks[index as usize];
+        let mc_block = &self.blocks.get(block_id.0 as usize)?;
 
         let min_state = mc_block.min_state_id.unwrap();
         let max_state = mc_block.max_state_id.unwrap();
@@ -140,14 +140,15 @@ impl Blocks {
         }))
     }
 
+    #[inline]
     pub(crate) fn get_by_index_and_state_id(
         &self,
         index: IndexType,
         state_id: Option<BlockStateId>,
-    ) -> Block<'_> {
-        let mc_block = &self.blocks[index as usize];
+    ) -> Option<Block<'_>> {
+        let mc_block = &self.blocks.get(index as usize)?;
 
-        Self::block_from_mc_block(mc_block, state_id)
+        Some(Self::block_from_mc_block(mc_block, state_id))
     }
 
     fn block_from_mc_block(mc_block: &McBlock, state_id: Option<BlockStateId>) -> Block<'_> {
