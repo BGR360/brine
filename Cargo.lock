@@ -1126,6 +1126,7 @@ name = "brine_render"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "bevy-inspector-egui",
  "brine_asset",
  "brine_chunk",
  "brine_data",
