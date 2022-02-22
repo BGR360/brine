@@ -2,6 +2,7 @@ use minecraft_assets::api::{AssetPack, Result};
 
 use rayon::prelude::*;
 use smallvec::SmallVec;
+use tracing::*;
 
 use brine_data::{BlockStateId, MinecraftData};
 
@@ -41,7 +42,18 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
         .flat_map(|block_name| block_states_bakery.bake_block_states_for_block(block_name))
         .collect();
 
-    let num_block_states = half_baked_block_states.len();
+    debug!("Finished half-baking block states");
+    // trace!(
+    //     "Half-baked block states: {:#?}",
+    //     &half_baked_block_states[0..100]
+    // );
+
+    let max_block_state_id = half_baked_block_states
+        .iter()
+        .map(|(block_state_id, _)| *block_state_id)
+        .max()
+        .unwrap();
+
     let num_models: usize = half_baked_block_states
         .iter()
         .flat_map(|(_id, block_state)| {
@@ -52,13 +64,16 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
         })
         .sum();
 
-    let mut baked_block_states = vec![BakedBlockState::default(); num_block_states];
+    let mut baked_block_states =
+        vec![BakedBlockState::default(); max_block_state_id.0 as usize + 1];
 
     let mut baked_models = BakedModelTable {
         models: Vec::with_capacity(num_models),
     };
 
+    // Turn half-baked block states into fully-baked block states.
     for (block_state_id, half_baked_block_state) in half_baked_block_states.into_iter() {
+        trace!("{:?}", block_state_id);
         let baked_grab_bags = half_baked_block_state
             .models
             .into_iter()
@@ -84,6 +99,17 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
 
         baked_block_states[block_state_id.0 as usize] = baked_block_state;
     }
+
+    debug!("Finished fully baking block states");
+
+    trace!(
+        "Fully baked: {:#?}",
+        baked_block_states
+            .iter()
+            .enumerate()
+            .filter(|(_index, baked_block_state)| !baked_block_state.models.is_empty())
+            .collect::<Vec<_>>()
+    );
 
     Ok(BakedAssets {
         block_states: BakedBlockStateTable {

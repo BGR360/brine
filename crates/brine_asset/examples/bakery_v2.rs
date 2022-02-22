@@ -28,7 +28,7 @@ fn main() {
 
     let baked_assets = bakery_v2::bake_all(&mc_data, &asset_pack);
 
-    println!("{:#?}", baked_assets);
+    // println!("{:#?}", baked_assets);
 }
 
 fn print_a_few(mc_data: &MinecraftData, asset_pack: &AssetPack) {
