@@ -50,17 +50,27 @@ impl Cuboid {
         }
     }
 
+    /// Gets the vertices of one of the faces of the cuboid, in the following order:
+    ///
+    /// ```txt
+    ///         2 ----> 3
+    ///           ^
+    ///     ^       \
+    ///     |         \
+    ///  +v |   0 ----> 1
+    ///     |
+    ///      -------->
+    ///        +u
+    /// ```
     #[inline(always)]
     pub fn get_face(&self, face: BlockFace) -> [Vec3A; 4] {
-        // Note: Triangles are always generated with the following index permutation:
-        // [0, 1, 3, 1, 2, 3]
         let verts = match face {
-            BlockFace::Down => [0, 1, 2, 3],
-            BlockFace::Up => [4, 5, 6, 7],
-            BlockFace::North => [4, 7, 1, 0],
-            BlockFace::South => [3, 2, 6, 5],
-            BlockFace::West => [4, 0, 3, 5],
-            BlockFace::East => [6, 2, 1, 7],
+            BlockFace::Down => [0, 1, 3, 2],
+            BlockFace::Up => [5, 6, 4, 7],
+            BlockFace::North => [1, 0, 7, 4],
+            BlockFace::South => [3, 2, 5, 6],
+            BlockFace::West => [0, 3, 4, 5],
+            BlockFace::East => [2, 1, 6, 7],
         };
 
         [
@@ -69,6 +79,25 @@ impl Cuboid {
             self.vertices[verts[2]],
             self.vertices[verts[3]],
         ]
+    }
+
+    #[inline(always)]
+    pub const fn get_indices(face: BlockFace) -> [u8; 6] {
+        //   4-------7          +y               U
+        //  /       /           | -z             | N
+        // 5-------6      -x____|/____+x   W ____|/____ E
+        //                     /|               /|
+        //   0-------1       +z |              S |
+        //  /       /           -y               D
+        // 3-------2
+        match face {
+            BlockFace::Down => [0, 1, 3, 0, 3, 2],  // [0, 1, 2, 0, 2, 3]
+            BlockFace::Up => [0, 1, 3, 0, 3, 2],    // [5, 6, 7, 5, 7, 4]
+            BlockFace::North => [0, 1, 2, 1, 3, 2], // [1, 0, 7, 0, 4, 7]
+            BlockFace::South => [0, 1, 2, 1, 3, 2], // [3, 2, 5, 2, 6, 5]
+            BlockFace::West => [0, 1, 3, 0, 3, 2],  // [0, 3, 5, 0, 5, 4]
+            BlockFace::East => [0, 1, 3, 0, 3, 2],  // [2, 1, 7, 2, 7, 6]
+        }
     }
 
     #[inline(always)]
@@ -121,9 +150,9 @@ impl CuboidRotation {
     #[inline(always)]
     pub fn rotate_vector(&self, vec: Vec3A) -> Vec3A {
         let transform = match self.axis {
-            Axis::X => Affine3A::from_rotation_x(self.angle.into()),
-            Axis::Y => Affine3A::from_rotation_y(self.angle.into()),
-            Axis::Z => Affine3A::from_rotation_z(self.angle.into()),
+            Axis::X => Affine3A::from_rotation_x(f32::from(self.angle).to_radians()),
+            Axis::Y => Affine3A::from_rotation_y(f32::from(self.angle).to_radians()),
+            Axis::Z => Affine3A::from_rotation_z(f32::from(self.angle).to_radians()),
         };
 
         transform.transform_vector3a(vec)
@@ -212,9 +241,12 @@ impl QuadRotation {
 
     #[inline(always)]
     pub fn rotate_quad(&self, quad: &mut BakedQuad) {
-        let rotated_vertices = quad.positions.map(|p| self.rotate_point(p));
+        let vertices = quad.positions;
+        let vertices = vertices.map(|vertex| vertex.map(|coord| coord - 0.5));
+        let vertices = vertices.map(|vertex| self.rotate_point(vertex));
+        let vertices = vertices.map(|vertex| vertex.map(|coord| coord + 0.5));
 
-        quad.positions = rotated_vertices;
+        quad.positions = vertices;
     }
 
     #[inline(always)]

@@ -2,18 +2,19 @@ use smallvec::SmallVec;
 
 use minecraft_assets::schemas::models::BlockFace;
 
-use crate::storage::TextureKey;
+use crate::{bakery_v2::models::Cuboid, storage::TextureKey};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BakedQuad {
     pub positions: [[f32; 3]; 4],
 
     pub normal: [f32; 3],
 
-    /// Tex coords specified as `[u0, v0, u1, v1]`.
-    pub tex_coords: [f32; 4],
+    pub tex_coords: [[f32; 2]; 4],
 
     pub texture: TextureKey,
+
+    pub face: BlockFace,
 
     pub cull_face: Option<BlockFace>,
 
@@ -23,7 +24,10 @@ pub struct BakedQuad {
 }
 
 impl BakedQuad {
-    pub const INDICES: [usize; 6] = [0, 1, 3, 1, 2, 3];
+    #[inline(always)]
+    pub fn indices(&self) -> [u8; 6] {
+        Cuboid::get_indices(self.face)
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
