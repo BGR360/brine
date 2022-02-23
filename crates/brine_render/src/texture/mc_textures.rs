@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use brine_asset::{storage::TextureKey, MinecraftAssets};
+use brine_asset::{MinecraftAssets, TextureKey};
 
 use crate::texture::{TextureAtlas, TextureManager};
 

@@ -5,12 +5,12 @@ use minecraft_assets::{
 use smallvec::SmallVec;
 use tracing::*;
 
-use crate::{
-    bakery_v2::models::{
+use crate::bakery_v2::{
+    models::{
         cuboid_math::QuadRotation, BakedModel, BakedQuad, CuboidBakery, UnbakedCuboid,
         UnbakedModel, UnbakedModels,
     },
-    storage::TextureTable,
+    textures::TextureTable,
 };
 
 pub struct ModelBakery<'a> {

@@ -6,17 +6,14 @@ use tracing::*;
 
 use brine_data::{BlockStateId, MinecraftData};
 
-use crate::{
-    bakery,
-    bakery_v2::{
-        self,
-        block_states::{
-            BakedBlockState, BakedBlockStateTable, BlockStateGrabBag, BlockStatesBakery,
-            HalfBakedBlockState, HalfBakedGrabBagChoice,
-        },
-        models::{BakedModelTable, ModelBakery},
+use crate::bakery_v2::{
+    self,
+    block_states::{
+        BakedBlockState, BakedBlockStateTable, BlockStateGrabBag, BlockStatesBakery,
+        HalfBakedBlockState, HalfBakedGrabBagChoice,
     },
-    storage::TextureTable,
+    models::{BakedModelTable, ModelBakery},
+    textures::TextureTable,
 };
 
 #[derive(Debug, Default)]
@@ -27,7 +24,7 @@ pub struct BakedAssets {
 }
 
 pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<BakedAssets> {
-    let texture_table = bakery::textures::load_texture_ids(asset_pack)?;
+    let texture_table = bakery_v2::textures::load_texture_table(asset_pack)?;
 
     let unbaked_models = bakery_v2::models::load_unbaked_block_models(asset_pack)?;
     let model_bakery = ModelBakery::new(&unbaked_models, &texture_table);

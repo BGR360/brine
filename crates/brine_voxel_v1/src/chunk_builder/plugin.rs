@@ -6,9 +6,9 @@ use bevy::utils::{HashMap, HashSet};
 use bevy::{ecs::event::Events, prelude::*, tasks::AsyncComputeTaskPool};
 use futures_lite::future;
 
-use brine_asset::api::BlockFace;
-use brine_asset::{BlockStateId, MinecraftAssets};
+use brine_asset::{api::BlockFace, MinecraftAssets};
 use brine_chunk::ChunkSection;
+use brine_data::BlockStateId;
 use brine_proto::event;
 
 use crate::chunk_builder::component::PendingChunk;

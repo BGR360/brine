@@ -3,10 +3,7 @@ use std::path::{Path, PathBuf};
 use minecraft_assets::api::AssetPack;
 use tracing::*;
 
-use brine_asset::{
-    bakery,
-    bakery_v2::{self, models::ModelBakery},
-};
+use brine_asset::bakery_v2::{self, models::ModelBakery};
 use brine_data::MinecraftData;
 
 fn cargo_workspace_relative_path(relative: impl AsRef<Path>) -> PathBuf {
@@ -33,7 +30,7 @@ fn main() {
 
 fn print_a_few(mc_data: &MinecraftData, asset_pack: &AssetPack) {
     info!("Loading textures");
-    let texture_table = bakery::textures::load_texture_ids(&asset_pack).unwrap();
+    let texture_table = bakery_v2::textures::load_texture_table(&asset_pack).unwrap();
 
     info!("Loading unbaked modlels");
     let unbaked_models = bakery_v2::models::load_unbaked_block_models(&asset_pack).unwrap();
