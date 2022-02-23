@@ -3,7 +3,7 @@ use std::fmt;
 use glam::{const_vec3a, Affine3A, Vec3A};
 use minecraft_assets::schemas::models::{Axis, BlockFace, ElementRotation};
 
-use crate::bakery_v2::models::BakedQuad;
+use crate::bakery::models::BakedQuad;
 
 /*
    .aMMMb  dMP dMP dMMMMb  .aMMMb  dMP dMMMMb

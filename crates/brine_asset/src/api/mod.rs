@@ -8,8 +8,6 @@ use std::{
 use minecraft_assets::api::{AssetPack, ResourcePath};
 use tracing::*;
 
-pub(crate) use minecraft_assets::schemas::Model as McModel;
-
 pub use minecraft_assets::{api::Result, schemas::models::BlockFace};
 
 pub use brine_data::{
@@ -17,7 +15,7 @@ pub use brine_data::{
     MinecraftData, Version,
 };
 
-use crate::bakery_v2::{
+use crate::bakery::{
     self,
     block_states::BakedBlockStateTable,
     models::BakedModelTable,
@@ -136,7 +134,7 @@ impl MinecraftAssetsInner {
             block_states,
             models,
             textures,
-        } = bakery_v2::bake_all(data, &assets)?;
+        } = bakery::bake_all(data, &assets)?;
 
         let new = Self {
             root: PathBuf::from(root),

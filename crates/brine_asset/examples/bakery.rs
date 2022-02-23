@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use minecraft_assets::api::AssetPack;
 use tracing::*;
 
-use brine_asset::bakery_v2::{self, models::ModelBakery};
+use brine_asset::bakery::{self, models::ModelBakery};
 use brine_data::MinecraftData;
 
 fn cargo_workspace_relative_path(relative: impl AsRef<Path>) -> PathBuf {
@@ -23,17 +23,17 @@ fn main() {
     let mc_data = MinecraftData::for_version("1.14.4");
     let asset_pack = AssetPack::at_path(cargo_workspace_relative_path("../../assets/1.14.4"));
 
-    let baked_assets = bakery_v2::bake_all(&mc_data, &asset_pack);
+    let baked_assets = bakery::bake_all(&mc_data, &asset_pack);
 
     // println!("{:#?}", baked_assets);
 }
 
 fn print_a_few(mc_data: &MinecraftData, asset_pack: &AssetPack) {
     info!("Loading textures");
-    let texture_table = bakery_v2::textures::load_texture_table(&asset_pack).unwrap();
+    let texture_table = bakery::textures::load_texture_table(&asset_pack).unwrap();
 
     info!("Loading unbaked modlels");
-    let unbaked_models = bakery_v2::models::load_unbaked_block_models(&asset_pack).unwrap();
+    let unbaked_models = bakery::models::load_unbaked_block_models(&asset_pack).unwrap();
 
     trace!(
         "Unbaked models: {:#?}",
@@ -44,7 +44,7 @@ fn print_a_few(mc_data: &MinecraftData, asset_pack: &AssetPack) {
     );
 
     info!("Loading unbaked block states");
-    let unbaked_block_states = bakery_v2::block_states::load_unbaked_block_states(&asset_pack);
+    let unbaked_block_states = bakery::block_states::load_unbaked_block_states(&asset_pack);
 
     let model_bakery = ModelBakery::new(&unbaked_models, &texture_table);
 

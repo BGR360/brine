@@ -2,7 +2,7 @@ use smallvec::SmallVec;
 
 use brine_data::BlockStateId;
 
-use crate::bakery_v2::models::BakedModelKey;
+use crate::bakery::models::BakedModelKey;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BakedBlockState {

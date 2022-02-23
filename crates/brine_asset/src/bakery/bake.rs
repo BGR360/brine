@@ -6,7 +6,7 @@ use tracing::*;
 
 use brine_data::{BlockStateId, MinecraftData};
 
-use crate::bakery_v2::{
+use crate::bakery::{
     self,
     block_states::{
         BakedBlockState, BakedBlockStateTable, BlockStateGrabBag, BlockStatesBakery,
@@ -24,12 +24,12 @@ pub struct BakedAssets {
 }
 
 pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<BakedAssets> {
-    let texture_table = bakery_v2::textures::load_texture_table(asset_pack)?;
+    let texture_table = bakery::textures::load_texture_table(asset_pack)?;
 
-    let unbaked_models = bakery_v2::models::load_unbaked_block_models(asset_pack)?;
+    let unbaked_models = bakery::models::load_unbaked_block_models(asset_pack)?;
     let model_bakery = ModelBakery::new(&unbaked_models, &texture_table);
 
-    let unbaked_block_states = bakery_v2::block_states::load_unbaked_block_states(asset_pack)?;
+    let unbaked_block_states = bakery::block_states::load_unbaked_block_states(asset_pack)?;
     let block_states_bakery = BlockStatesBakery::new(mc_data, &unbaked_block_states, model_bakery);
 
     // (Half-)Bake block states in parallel.

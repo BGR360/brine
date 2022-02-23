@@ -1,6 +1,6 @@
 use smallvec::SmallVec;
 
-use crate::bakery_v2::models::BakedModel;
+use crate::bakery::models::BakedModel;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct HalfBakedBlockState {

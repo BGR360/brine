@@ -2,10 +2,10 @@
 #![allow(clippy::module_inception)]
 
 pub mod api;
-pub mod bakery_v2;
+pub mod bakery;
 
 pub use api::{BlockFace, MinecraftAssets};
-pub use bakery_v2::{
+pub use bakery::{
     block_states::BakedBlockStateTable,
     models::{BakedModel, BakedModelKey, BakedModelTable, BakedQuad},
     textures::{TextureKey, TextureTable},
