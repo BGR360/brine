@@ -30,8 +30,14 @@ impl BakedQuad {
     }
 }
 
+pub struct BakedCuboid {
+    pub is_full_cube: bool,
+    pub quads: SmallVec<[BakedQuad; 6]>,
+}
+
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct BakedModel {
+    pub is_full_cube: bool,
     pub quads: SmallVec<[BakedQuad; 6]>,
     /*
     TODO:

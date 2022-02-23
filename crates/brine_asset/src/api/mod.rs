@@ -91,13 +91,11 @@ impl MinecraftAssets {
             );
         }
 
-        let grab_bag = baked_block_state.models.first().or_else(|| {
+        // TODO: pick random model from grab bag.
+        let model_key = baked_block_state.get_first_model().or_else(|| {
             warn!("{:?} has no models!", block_state_id);
             None
         })?;
-
-        // TODO: pick random model from grab bag.
-        let model_key = grab_bag.choices[0];
 
         let model = self.models().get_by_key(model_key).or_else(|| {
             warn!("No model with key {:?}", model_key);

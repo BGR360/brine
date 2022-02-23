@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{cmp::Ordering, fmt};
 
 use glam::{const_vec3a, Affine3A, Vec3A};
 use minecraft_assets::schemas::models::{Axis, BlockFace, ElementRotation};
@@ -33,9 +33,16 @@ pub struct Cuboid {
 
 impl Cuboid {
     #[inline(always)]
-    pub fn new<T: Into<Vec3A>>(min: T, max: T) -> Self {
-        let min = min.into();
-        let max = max.into();
+    pub fn new<T: Into<Vec3A>>(from: T, to: T) -> Self {
+        let from: Vec3A = from.into();
+        let to: Vec3A = to.into();
+
+        let (min, max) = if from.cmplt(to).any() {
+            (from, to)
+        } else {
+            (to, from)
+        };
+
         Self {
             vertices: [
                 Vec3A::new(min.x, min.y, min.z),
@@ -117,6 +124,39 @@ impl Cuboid {
         let vertices = self.vertices.map(|vertex| vertex * scale_factor);
 
         Self { vertices }
+    }
+
+    #[inline(always)]
+    pub fn min(&self) -> Vec3A {
+        self.vertices
+            .into_iter()
+            .min_by(|a, b| {
+                if a.cmplt(*b).any() {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            })
+            .unwrap()
+    }
+
+    #[inline(always)]
+    pub fn max(&self) -> Vec3A {
+        self.vertices
+            .into_iter()
+            .max_by(|a, b| {
+                if a.cmpgt(*b).any() {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            })
+            .unwrap()
+    }
+
+    #[inline]
+    pub fn is_full_cube(&self) -> bool {
+        self.min() == Vec3A::ZERO && self.max() == Vec3A::ONE * 16.0
     }
 }
 

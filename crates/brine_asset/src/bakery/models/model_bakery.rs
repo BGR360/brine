@@ -7,7 +7,7 @@ use tracing::*;
 
 use crate::bakery::{
     models::{
-        cuboid_math::QuadRotation, BakedModel, BakedQuad, CuboidBakery, UnbakedCuboid,
+        cuboid_math::QuadRotation, BakedCuboid, BakedModel, CuboidBakery, UnbakedCuboid,
         UnbakedModel, UnbakedModels,
     },
     textures::TextureTable,
@@ -53,15 +53,28 @@ impl<'a> ModelBakery<'a> {
 
         let resolved_textures = ModelResolver::resolve_textures(parent_chain.iter().copied());
 
+        let mut all_cuboids_full_cubes = true;
+
         if let Some(cuboid_elements) = ModelResolver::resolve_elements(parent_chain.iter().copied())
         {
             for cuboid in cuboid_elements {
-                let mut cuboid_quads = self.bake_cuboid(&cuboid, &resolved_textures, uv_lock);
-                baked_quads.append(&mut cuboid_quads);
+                let BakedCuboid {
+                    is_full_cube,
+                    mut quads,
+                } = self.bake_cuboid(&cuboid, &resolved_textures, uv_lock);
+
+                if !is_full_cube {
+                    all_cuboids_full_cubes = false;
+                }
+
+                baked_quads.append(&mut quads);
             }
         }
 
-        Some(BakedModel { quads: baked_quads })
+        Some(BakedModel {
+            quads: baked_quads,
+            is_full_cube: all_cuboids_full_cubes,
+        })
     }
 
     pub fn bake_cuboid(
@@ -69,7 +82,7 @@ impl<'a> ModelBakery<'a> {
         cuboid: &'a UnbakedCuboid,
         resolved_textures: &Textures,
         uv_lock: bool,
-    ) -> SmallVec<[BakedQuad; 6]> {
+    ) -> BakedCuboid {
         let cuboid_bakery =
             CuboidBakery::new(cuboid, resolved_textures, self.texture_table, uv_lock);
 

@@ -71,6 +71,15 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
     // Turn half-baked block states into fully-baked block states.
     for (block_state_id, half_baked_block_state) in half_baked_block_states.into_iter() {
         trace!("{:?}", block_state_id);
+
+        // The block state is a full cube if all of its models are full cubes.
+        let is_full_cube = half_baked_block_state.models.iter().all(|grab_bag| {
+            grab_bag
+                .choices
+                .iter()
+                .all(|choice| choice.model.is_full_cube)
+        });
+
         let baked_grab_bags = half_baked_block_state
             .models
             .into_iter()
@@ -92,6 +101,7 @@ pub fn bake_all(mc_data: &MinecraftData, asset_pack: &AssetPack) -> Result<Baked
 
         let baked_block_state = BakedBlockState {
             models: baked_grab_bags,
+            is_full_cube,
         };
 
         baked_block_states[block_state_id.0 as usize] = baked_block_state;

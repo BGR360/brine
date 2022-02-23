@@ -4,7 +4,7 @@ mod cuboid_math;
 mod model_bakery;
 mod unbaked;
 
-pub use baked::{BakedModel, BakedModelKey, BakedModelTable, BakedQuad};
+pub use baked::{BakedCuboid, BakedModel, BakedModelKey, BakedModelTable, BakedQuad};
 pub use cuboid_bakery::CuboidBakery;
 pub use cuboid_math::{Cuboid, CuboidRotation, EighthRotation, QuarterRotation};
 pub use model_bakery::ModelBakery;

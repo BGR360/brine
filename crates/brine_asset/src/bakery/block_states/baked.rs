@@ -6,7 +6,16 @@ use crate::bakery::models::BakedModelKey;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BakedBlockState {
+    pub is_full_cube: bool,
     pub models: SmallVec<[BlockStateGrabBag; 1]>,
+}
+
+impl BakedBlockState {
+    pub fn get_first_model(&self) -> Option<BakedModelKey> {
+        self.models
+            .first()
+            .map(|grab_bag| *grab_bag.choices.first().unwrap())
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

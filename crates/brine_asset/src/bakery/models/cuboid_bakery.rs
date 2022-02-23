@@ -6,7 +6,7 @@ use smallvec::SmallVec;
 use tracing::*;
 
 use crate::bakery::{
-    models::{BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedQuad},
+    models::{BakedCuboid, BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedQuad},
     textures::TextureTable,
 };
 
@@ -45,7 +45,9 @@ impl<'a> CuboidBakery<'a> {
         }
     }
 
-    pub fn bake(&self) -> SmallVec<[BakedQuad; 6]> {
+    pub fn bake(&self) -> BakedCuboid {
+        let is_full_cube = self.rotated_and_scaled_cuboid.is_full_cube();
+
         let mut quads = SmallVec::new();
 
         for face in [
@@ -66,7 +68,10 @@ impl<'a> CuboidBakery<'a> {
             }
         }
 
-        quads
+        BakedCuboid {
+            is_full_cube,
+            quads,
+        }
     }
 
     #[inline]
