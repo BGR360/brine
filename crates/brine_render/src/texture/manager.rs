@@ -1,6 +1,6 @@
 use bevy::{asset::HandleId, prelude::*, render::options::WgpuOptions, utils::HashMap};
 
-use brine_asset::storage::TextureKey;
+use brine_asset::TextureKey;
 
 use crate::texture::{PendingAtlas, TextureAtlas};
 

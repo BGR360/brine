@@ -17,12 +17,12 @@ pub use brine_data::{
     MinecraftData, Version,
 };
 
-use crate::{
-    bakery::{self, block_states::BlockStateBuilder, models::ModelBuilder},
-    bakery_v2::{self, BakedAssets},
-    storage::{
-        BlockStateTable, CuboidTable, ModelTable, Quad, QuadTable, TextureKey, TextureTable,
-    },
+use crate::bakery_v2::{
+    self,
+    block_states::BakedBlockStateTable,
+    models::BakedModelTable,
+    textures::{TextureKey, TextureTable},
+    BakedAssets,
 };
 
 /// Provides access to Minecraft assets for a given assets directory.
@@ -50,33 +50,18 @@ impl MinecraftAssets {
     }
 
     #[inline]
-    pub fn block_states(&self) -> &BlockStateTable {
+    pub fn block_states(&self) -> &BakedBlockStateTable {
         &self.inner.block_state_table
     }
 
     #[inline]
-    pub fn models(&self) -> &ModelTable {
+    pub fn models(&self) -> &BakedModelTable {
         &self.inner.model_table
-    }
-
-    #[inline]
-    pub fn cuboids(&self) -> &CuboidTable {
-        &self.inner.cuboid_table
-    }
-
-    #[inline]
-    pub fn quads(&self) -> &QuadTable {
-        &self.inner.quad_table
     }
 
     #[inline]
     pub fn textures(&self) -> &TextureTable {
         &self.inner.texture_table
-    }
-
-    #[inline]
-    pub fn baked_assets(&self) -> &BakedAssets {
-        &self.inner.baked_assets
     }
 
     #[inline]
@@ -96,75 +81,40 @@ impl MinecraftAssets {
     ) -> Option<PathBuf> {
         trace!("Querying texture for {:?}:{:?}", block_state_id, face);
 
-        let block_state = self.block_states().get_by_key(block_state_id).or_else(|| {
+        let baked_block_state = self.block_states().get_by_key(block_state_id).or_else(|| {
             warn!("No block for {:?}", block_state_id);
             None
         })?;
 
-        trace!("{:#?}", block_state);
-
-        let grab_bag = block_state.models.first().or_else(|| {
-            warn!("{:?} has no models!", block_state_id);
-            None
-        })?;
-
-        // TODO: pick random model from grab bag.
-        let model_key = grab_bag
-            .choices
-            .get(0)
-            .or_else(|| {
-                warn!("{:?} has no models!", block_state_id);
-                None
-            })?
-            .model;
-
-        if block_state.models.len() > 1 {
+        if baked_block_state.models.len() > 1 {
             debug!(
                 "{:?} is composed of multiple models, using the first one",
                 block_state_id
             );
         }
 
-        let model = self.models().get_by_key(model_key).unwrap();
+        let grab_bag = baked_block_state.models.first().or_else(|| {
+            warn!("{:?} has no models!", block_state_id);
+            None
+        })?;
 
-        trace!("{:#?}", model);
+        // TODO: pick random model from grab bag.
+        let model_key = grab_bag.choices[0];
 
-        if model.num_cuboids() > 1 {
-            debug!(
-                "{:?} for {:?} has more than one cuboid element, using the first one",
-                model_key, block_state_id
-            );
-        }
+        let model = self.models().get_by_key(model_key).or_else(|| {
+            warn!("No model with key {:?}", model_key);
+            None
+        })?;
 
-        let cuboid = self.cuboids().get_by_key(model.first_cuboid).unwrap();
-
-        trace!("{:#?}", cuboid);
-
-        let quads: Vec<&Quad> = cuboid
-            .quads()
-            .map(|quad_key| self.quads().get_by_key(quad_key).unwrap())
-            .collect();
-
-        let quad = quads
-            .iter()
-            .find(|quad| {
-                trace!("{:#?}", quad);
-                quad.face == face
-            })
-            .or_else(|| {
-                debug!(
-                    "Cuboid of {:?} for {:?} has no quad on block face {:?}",
-                    model_key, block_state_id, face
-                );
-
-                quads.first()
-            })?;
+        let quad = model.quads.iter().find(|quad| {
+            quad.cull_face
+                .map(|cull_face| cull_face == face)
+                .unwrap_or(false)
+        })?;
 
         let texture_key = quad.texture;
 
-        let texture_path = self.get_texture_path(texture_key)?;
-
-        trace!("{}", texture_path.to_string_lossy());
+        let texture_path = self.get_texture_path(texture_key).unwrap();
 
         Some(texture_path)
     }
@@ -173,56 +123,26 @@ impl MinecraftAssets {
 #[derive(Debug)]
 pub(crate) struct MinecraftAssetsInner {
     pub(crate) root: PathBuf,
-    pub(crate) block_state_table: BlockStateTable,
-    pub(crate) cuboid_table: CuboidTable,
-    pub(crate) model_table: ModelTable,
-    pub(crate) quad_table: QuadTable,
+    pub(crate) block_state_table: BakedBlockStateTable,
+    pub(crate) model_table: BakedModelTable,
     pub(crate) texture_table: TextureTable,
-    pub(crate) baked_assets: BakedAssets,
 }
 
 impl MinecraftAssetsInner {
     fn build(root: &Path, data: &MinecraftData) -> Result<Self> {
         let assets = AssetPack::at_path(root);
 
-        let texture_table = bakery::textures::load_texture_ids(&assets)?;
-
-        let mc_models = {
-            let unresolved_models = bakery::models::unresolved::load_block_models(&assets)?;
-
-            bakery::models::resolved::resolve_models(&unresolved_models)
-        };
-
-        let mc_block_states = bakery::block_states::load_block_states(&assets)?;
-
-        let mut model_builder = ModelBuilder::new(&mc_models, &texture_table);
-
-        let mut block_state_builder =
-            BlockStateBuilder::new(data, &mc_block_states, &mut model_builder);
-
-        block_state_builder.build()?;
-
-        let BlockStateBuilder {
-            block_state_table, ..
-        } = block_state_builder;
-
-        let ModelBuilder {
-            model_table,
-            cuboid_table,
-            quad_table,
-            ..
-        } = model_builder;
-
-        let baked_assets = bakery_v2::bake_all(data, &assets)?;
+        let BakedAssets {
+            block_states,
+            models,
+            textures,
+        } = bakery_v2::bake_all(data, &assets)?;
 
         let new = Self {
             root: PathBuf::from(root),
-            block_state_table,
-            cuboid_table,
-            model_table,
-            quad_table,
-            texture_table,
-            baked_assets,
+            block_state_table: block_states,
+            model_table: models,
+            texture_table: textures,
         };
 
         Ok(new)

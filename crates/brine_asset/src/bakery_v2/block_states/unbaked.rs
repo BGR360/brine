@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use minecraft_assets::{
-    api::{AssetPack, ResourceKind, Result},
-    schemas::BlockStates,
-};
+use minecraft_assets::api::{AssetPack, ResourceKind, Result};
 
-pub type UnbakedBlockStates = BlockStates;
+pub type UnbakedBlockStates = minecraft_assets::schemas::blockstates::BlockStates;
 
 pub type UnbakedBlockStatesTable = HashMap<String, UnbakedBlockStates>;
 

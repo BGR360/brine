@@ -1,6 +1,6 @@
 use bevy::{prelude::*, reflect::TypeUuid, sprite::Rect, utils::HashMap};
 
-use brine_asset::storage::TextureKey;
+use brine_asset::TextureKey;
 
 #[derive(Debug, Clone, TypeUuid)]
 #[uuid = "3e8bc6e9-b91f-4f11-81ef-105ec53fa370"]

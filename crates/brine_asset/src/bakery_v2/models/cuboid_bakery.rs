@@ -5,9 +5,9 @@ use minecraft_assets::{
 use smallvec::SmallVec;
 use tracing::*;
 
-use crate::{
-    bakery_v2::models::{BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedQuad},
-    storage::TextureTable,
+use crate::bakery_v2::{
+    models::{BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedQuad},
+    textures::TextureTable,
 };
 
 /// Bakes a single cuboid for a model.

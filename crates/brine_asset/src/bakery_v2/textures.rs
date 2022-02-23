@@ -1,5 +1,5 @@
 use indexmap::IndexSet;
-use minecraft_assets::api::ResourceIdentifier;
+use minecraft_assets::api::{AssetPack, ResourceIdentifier, ResourceKind, Result};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureKey(pub usize);
@@ -34,4 +34,17 @@ impl TextureTable {
     pub fn get_key(&self, name: &ResourceIdentifier) -> Option<TextureKey> {
         self.textures.get_index_of(name).map(TextureKey)
     }
+}
+
+pub fn load_texture_table(assets: &AssetPack) -> Result<TextureTable> {
+    let mut table = TextureTable::default();
+
+    for texture_id in assets
+        .enumerate_resources("minecraft", ResourceKind::Texture)?
+        .into_iter()
+    {
+        table.insert(texture_id);
+    }
+
+    Ok(table)
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use minecraft_assets::api::{ResourceIdentifier, ResourcePath};
 
-use brine_asset::storage::TextureKey;
+use brine_asset::TextureKey;
 use brine_render::texture::{TextureAtlas, TextureManager, TextureManagerPlugin};
 
 fn get_a_few_textures(
