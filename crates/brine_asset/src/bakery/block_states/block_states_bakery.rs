@@ -8,7 +8,7 @@ use tracing::*;
 
 use brine_data::{blocks::StateValue, BlockId, BlockState, BlockStateId, MinecraftData};
 
-use crate::bakery_v2::{
+use crate::bakery::{
     block_states::{
         half_baked::{HalfBakedBlockStateGrabBag, HalfBakedGrabBagChoice},
         model_cache::BakedModelCache,

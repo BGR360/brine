@@ -2,7 +2,7 @@ use smallvec::SmallVec;
 
 use minecraft_assets::schemas::models::BlockFace;
 
-use crate::bakery_v2::{models::Cuboid, textures::TextureKey};
+use crate::bakery::{models::Cuboid, textures::TextureKey};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BakedQuad {

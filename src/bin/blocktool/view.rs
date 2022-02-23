@@ -6,7 +6,7 @@ use bevy::{
 use bevy_inspector_egui::WorldInspectorPlugin;
 
 use brine::debug::DebugWireframePlugin;
-use brine_asset::{bakery_v2::models::BakedModel, BlockFace, MinecraftAssets};
+use brine_asset::{BakedModel, BlockFace, MinecraftAssets};
 use brine_data::{BlockStateId, MinecraftData};
 use brine_render::texture::{
     MinecraftTexturesPlugin, MinecraftTexturesState, TextureAtlas, TextureManager,
@@ -303,23 +303,13 @@ fn spawn_block_state(
     materials: &mut Assets<StandardMaterial>,
     commands: &mut Commands,
 ) -> bool {
-    let baked_block_state = mc_assets
-        .baked_assets()
-        .block_states
-        .get_by_key(block_state_id)
-        .unwrap();
-
-    let name = get_entity_name(block_state_id, mc_data);
+    let baked_block_state = mc_assets.block_states().get_by_key(block_state_id).unwrap();
 
     let mut has_model = false;
 
     for grab_bag in baked_block_state.models.iter() {
         let model_key = grab_bag.choices.first().unwrap();
-        let baked_model = mc_assets
-            .baked_assets()
-            .models
-            .get_by_key(*model_key)
-            .unwrap();
+        let baked_model = mc_assets.models().get_by_key(*model_key).unwrap();
 
         if baked_model.quads.is_empty() {
             continue;

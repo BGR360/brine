@@ -5,7 +5,7 @@ use minecraft_assets::{
 use smallvec::SmallVec;
 use tracing::*;
 
-use crate::bakery_v2::{
+use crate::bakery::{
     models::{BakedQuad, Cuboid, CuboidRotation, UnbakedCuboid, UnbakedQuad},
     textures::TextureTable,
 };

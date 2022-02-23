@@ -1,6 +1,6 @@
 use minecraft_assets::schemas::blockstates::ModelProperties;
 
-use crate::bakery_v2::models::{BakedModel, ModelBakery};
+use crate::bakery::models::{BakedModel, ModelBakery};
 
 pub struct BakedModelCache<'a, 'b> {
     model_bakery: &'a ModelBakery<'b>,
