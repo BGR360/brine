@@ -56,7 +56,8 @@ impl Quad {
             Some(Direction::YPos) => [0.0, 1.0, 0.0],
             Some(Direction::ZNeg) => [0.0, 0.0, -1.0],
             Some(Direction::ZPos) => [0.0, 0.0, 1.0],
-            None => unimplemented!(),
+            // TODO: FIX THIS SHIT
+            None => [0.0, 0.0, 0.0],
         };
 
         [normal; 4]

@@ -25,16 +25,16 @@ impl Default for BakedChunk {
 
 pub struct ChunkBakery<'a> {
     mc_data: &'a MinecraftData,
-    // mc_assets: &'a MinecraftAssets,
+    mc_assets: &'a MinecraftAssets,
 }
 
 impl<'a> ChunkBakery<'a> {
-    pub fn new(mc_data: &'a MinecraftData) -> Self {
-        Self { mc_data }
+    pub fn new(mc_data: &'a MinecraftData, mc_assets: &'a MinecraftAssets) -> Self {
+        Self { mc_data, mc_assets }
     }
 
     pub fn bake_chunk(&self, chunk: &ChunkSection) -> BakedChunk {
-        let view = ChunkView::new(self.mc_data, chunk);
+        let view = ChunkView::new(self.mc_data, self.mc_assets, chunk);
 
         let voxel_mesh = SimpleMesher.generate_mesh(view);
 

@@ -1133,6 +1133,7 @@ dependencies = [
  "brine_voxel",
  "fastrand",
  "minecraft-assets",
+ "smallvec",
 ]
 
 [[package]]

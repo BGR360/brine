@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.6"
+smallvec = "1"
 
 brine_asset = { path = "../brine_asset" }
 brine_chunk = { path = "../brine_chunk" }
